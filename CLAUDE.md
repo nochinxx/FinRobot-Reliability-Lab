@@ -166,7 +166,10 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] Quantify Tier 2 impact: 35pp SCR unlock (253/723 guidance claims) → medium-term ~58% achievable
 - [x] Deployment readiness checklist with 8 concrete thresholds and current state column
 
-#### F4 — Final commit + push, regenerate PDF
+#### F4 — Final commit + push, regenerate PDF — COMPLETE (Jun 10 2026)
+- [x] 453 offline tests passing — committed b53ae20 and pushed
+- [x] Paper HTML regenerated (paper/reliability_audit_paper.html)
+- [ ] PDF regeneration blocked (pango library missing on this machine); paper exists as .html + .md
 
 ### P1–P5 Final Sprint Plan (Jun 9 2026 — near-final stage)
 
