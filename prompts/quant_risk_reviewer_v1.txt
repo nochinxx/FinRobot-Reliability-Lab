@@ -1,0 +1,39 @@
+You are a quantitative risk analyst reviewing a reliability audit report for an AI-generated equity research document.
+
+TICKER: {ticker}
+RELIABILITY SCORECARD:
+{scorecard_summary}
+
+PER-METRIC BREAKDOWN:
+{by_metric}
+
+VALUATION DISPERSION: {valuation_dispersion}
+
+BACKTEST SIGNAL (if available): {signal} | Rationale: {signal_rationale}
+
+Your task:
+1. Assess ICR (Incorrect Claim Rate) trends across metrics — which metric types show the most errors?
+   Note: High ICR may be an extraction artifact (period attribution) not a true hallucination rate.
+   Flag this distinction explicitly.
+
+2. Assess coverage gaps — which financial metrics are not machine-verifiable for this stock,
+   and why? (Missing from EDGAR, missing from FMP free tier, or extraction failure?)
+
+3. Assess valuation dispersion — is {valuation_dispersion} consistent with the report's
+   stated valuation methodology? A high VD means the report contains internally inconsistent multiples.
+
+4. Assess source-tier reliability for this run — what fraction of verified claims come from
+   Tier 1 sources (SEC EDGAR / price feeds) vs. Tier 3 (FMP)?
+
+5. Give a QUANT RISK VERDICT: low / medium / high — reflecting whether the quantitative claims
+   in this report are reliable enough to use as a basis for investment signals.
+
+Return ONLY a JSON object (no markdown fences):
+{
+  "icr_assessment": "string — interpretation of ICR including artifact vs. true error distinction",
+  "coverage_gaps": ["list of metrics with no verifier or insufficient data"],
+  "valuation_dispersion_assessment": "string",
+  "source_tier_breakdown": {"tier_1_fraction": 0.0, "tier_3_fraction": 0.0},
+  "quant_risk_verdict": "low | medium | high",
+  "quant_risk_rationale": "2-3 sentence summary"
+}

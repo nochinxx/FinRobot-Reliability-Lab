@@ -1,0 +1,6 @@
+ticker,claim_type,metric,period,claimed_value,verified_value,source,verification_status,notes
+NVDA,financial,revenue,2023,$27 billion,$26.97B,SEC EDGAR 10-K,verified,Revenue surged from approximately $27 billion in FY2023
+NVDA,financial,revenue,2024,$60.9 billion,,SEC EDGAR: no data for FY2024 yet,not_machine_verifiable,Revenue surged to over $60.9 billion in FY2024
+NVDA,valuation,pe_ratio,2026,$4197.47 B,,year 2026 > 2025 — forward projection,not_machine_verifiable,Trading at a P/E of 37.7x based on forward earnings estimates
+NVDA,guidance,revenue,2025,$215.9 billion,,forward-looking (cannot verify against actuals),not_machine_verifiable,Revenue is projected to reach $215.9 billion in FY2025E
+NVDA,financial,ebitda_margin,2023,64.3%,21.9%,FMP/SEC EBITDA margin FY2023,incorrect,EBITDA margin expanded to 64.3% in FY2023

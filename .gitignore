@@ -5,6 +5,7 @@ __pycache__/
 .ipynb_checkpoints/
 .cache/
 *.csv
+!tests/fixtures/*.csv
 *.jpg
 *.png
 !finrobot_equity/web_app/static/*.png
@@ -40,3 +41,7 @@ venv/
 finrobot_equity/logs/
 finrobot_equity/web_app/data/*.db
 finrobot_equity/core/output/
+
+# Generated audit outputs (large artifacts, not source)
+output/
+reliability_lab/output/

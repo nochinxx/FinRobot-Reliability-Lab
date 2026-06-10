@@ -1,0 +1,64 @@
+You are an institutional equity-research data extraction engine.
+
+Extract the investment recommendation from the report below into strict JSON.
+
+Rules:
+- Do not infer missing values unless clearly stated.
+- If the report implies but does not explicitly state a value, mark inferred=true.
+- If unavailable, return null.
+- Every extracted field must include evidence_text copied verbatim from the report.
+- Distinguish current price, target price, fair value, and implied valuation.
+- Distinguish management guidance, analyst consensus, and the model's forecast.
+- Separate facts from forecasts.
+
+Return JSON with this schema:
+
+{
+  "ticker": "",
+  "company": "",
+  "report_date": "",
+  "model": "",
+  "rating": {
+    "value": "BUY|HOLD|SELL|null",
+    "inferred": false,
+    "evidence_text": ""
+  },
+  "current_price": {
+    "value": null,
+    "date": null,
+    "evidence_text": ""
+  },
+  "price_target": {
+    "value": null,
+    "time_horizon_months": null,
+    "evidence_text": ""
+  },
+  "expected_return_pct": {
+    "value": null,
+    "calculation": "",
+    "evidence_text": ""
+  },
+  "core_thesis": "",
+  "variant_perception": "",
+  "top_catalysts": [
+    {
+      "catalyst": "",
+      "expected_date": null,
+      "mechanism": "",
+      "evidence_text": ""
+    }
+  ],
+  "top_risks": [
+    {
+      "risk": "",
+      "severity": "LOW|MEDIUM|HIGH",
+      "evidence_text": ""
+    }
+  ],
+  "key_assumptions": [],
+  "valuation_methods": [],
+  "unsupported_recommendation_components": []
+}
+
+REPORT TEXT:
+{report_text}

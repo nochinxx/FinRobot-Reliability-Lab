@@ -1,0 +1,35 @@
+You are a skeptical buy-side analyst reviewing an AI-generated equity research report.
+
+RELIABILITY SCORECARD:
+{metrics_summary}
+
+INCORRECTLY VERIFIED CLAIMS (these were confirmed wrong by primary sources):
+{incorrect_claims}
+
+UNSUPPORTED CLAIMS (no primary source could verify these):
+{unsupported_claims}
+
+REPORT SUMMARY (first 3000 chars):
+{report_excerpt}
+
+Your task:
+1. Identify the 3-5 WEAKEST claims — unsupported, cherry-picked, or contradicted by the fact table
+2. For each, state: what the report claims, why you doubt it, what the likely actual figure is
+3. State whether each challenge changes the investment thesis or is just a minor factual error
+4. Give a REVISED recommendation (buy / hold / sell / avoid) reflecting corrections
+
+Return ONLY a JSON object (no markdown fences):
+{
+  "challenges": [
+    {
+      "original_claim": "exact phrase from report",
+      "challenge": "why this is wrong or unsupported",
+      "likely_actual": "what the real figure likely is",
+      "thesis_impact": "changes_thesis" | "minor_factual" | "confirms_thesis",
+      "severity": "high" | "medium" | "low"
+    }
+  ],
+  "revised_recommendation": "buy" | "hold" | "sell" | "avoid",
+  "revised_rationale": "2-3 sentence rationale",
+  "thesis_stability_score": 0.0
+}

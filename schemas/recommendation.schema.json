@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "recommendation.schema.json",
+  "title": "FinRobot Structured Recommendation",
+  "description": "Structured extraction of the investment recommendation from a FinRobot equity report. Populated by recommendation_extractor_v1.txt (planned for PR2). Distinct from the raw report text.",
+  "type": "object",
+  "required": ["ticker", "rating", "extraction_method"],
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "company": {
+      "type": ["string", "null"]
+    },
+    "report_date": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "model": {
+      "type": ["string", "null"],
+      "description": "FinRobot model/agent that generated the report."
+    },
+    "rating": {
+      "type": "object",
+      "required": ["value"],
+      "properties": {
+        "value": {
+          "type": ["string", "null"],
+          "enum": ["BUY", "HOLD", "SELL", null]
+        },
+        "inferred": {
+          "type": "boolean",
+          "description": "True if rating was implied but not explicitly stated.",
+          "default": false
+        },
+        "evidence_text": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "current_price": {
+      "type": ["object", "null"],
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "date": { "type": ["string", "null"] },
+        "evidence_text": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "price_target": {
+      "type": ["object", "null"],
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "time_horizon_months": { "type": ["integer", "null"] },
+        "evidence_text": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "expected_return_pct": {
+      "type": ["object", "null"],
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "calculation": { "type": ["string", "null"] },
+        "evidence_text": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "core_thesis": {
+      "type": ["string", "null"]
+    },
+    "variant_perception": {
+      "type": ["string", "null"],
+      "description": "Why this opportunity may not be consensus. Extracted from report if present."
+    },
+    "top_catalysts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "catalyst": { "type": "string" },
+          "expected_date": { "type": ["string", "null"] },
+          "mechanism": { "type": ["string", "null"] },
+          "evidence_text": { "type": ["string", "null"] }
+        },
+        "required": ["catalyst"]
+      }
+    },
+    "top_risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "risk": { "type": "string" },
+          "severity": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "evidence_text": { "type": ["string", "null"] }
+        },
+        "required": ["risk", "severity"]
+      }
+    },
+    "key_assumptions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "valuation_methods": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unsupported_recommendation_components": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Parts of the recommendation that lack supporting evidence in the report."
+    },
+    "extraction_method": {
+      "type": "string",
+      "enum": ["llm", "regex", "manual"],
+      "description": "How this recommendation object was populated."
+    },
+    "prompt_version": {
+      "type": ["string", "null"],
+      "description": "e.g. 'recommendation_extractor_v1'"
+    },
+    "model_name": {
+      "type": ["string", "null"]
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    }
+  },
+  "additionalProperties": false
+}

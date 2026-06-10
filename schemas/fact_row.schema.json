@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fact_row.schema.json",
+  "title": "FinRobot Fact Table Row",
+  "description": "One row in the verified fact table. Maps each extracted claim to a verification result.",
+  "type": "object",
+  "required": ["ticker", "claim_type", "metric", "period", "claimed_value", "verification_status"],
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "description": "Uppercase ticker symbol.",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "claim_type": {
+      "type": "string",
+      "enum": ["financial", "valuation", "stock-price", "guidance", "peer-comparison", "catalyst", "risk", "narrative"]
+    },
+    "metric": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string",
+      "description": "Fiscal year or period string. May be empty if period was not extractable."
+    },
+    "claimed_value": {
+      "type": "string",
+      "description": "Human-readable value from the report (value_display from claim), e.g. '$60.9 billion'."
+    },
+    "verified_value": {
+      "type": "string",
+      "description": "Primary-source value as a display string, e.g. '$26.97B'. Empty if verification_status is not 'verified' or 'incorrect'."
+    },
+    "source": {
+      "type": "string",
+      "description": "Human-readable source label, e.g. 'SEC EDGAR 10-K', 'FMP ratios FY2023'. Empty if not applicable."
+    },
+    "source_tier": {
+      "type": ["integer", "null"],
+      "enum": [1, 2, 3, 4, 5, null],
+      "description": "Source tier (1=SEC/exchange, 2=company IR, 3=aggregator/FMP, 4=news, 5=LLM). Planned for PR2."
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": ["verified", "incorrect", "unsupported", "not_machine_verifiable", "SOURCE_CONFLICT"],
+      "description": "Result of verification. SOURCE_CONFLICT means multiple sources disagree beyond tolerance. 'incorrect' may be a period attribution artifact — do not interpret as confirmed hallucination without manual review."
+    },
+    "notes": {
+      "type": "string",
+      "description": "First 200 chars of claim_text (extraction context). Not a structured audit note.",
+      "maxLength": 250
+    },
+    "verified_value_alt": {
+      "type": "string",
+      "description": "Secondary source value when verification_status=SOURCE_CONFLICT. Empty otherwise. Planned for PR3."
+    },
+    "source_alt": {
+      "type": "string",
+      "description": "Secondary source label when verification_status=SOURCE_CONFLICT. Empty otherwise."
+    },
+    "conflict_details": {
+      "type": ["string", "null"],
+      "description": "JSON-serialized object {tier1_value, tier3_value, delta_pct, tolerance} when verification_status=SOURCE_CONFLICT. Null/empty otherwise."
+    }
+  },
+  "additionalProperties": false
+}

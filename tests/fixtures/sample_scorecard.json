@@ -1,0 +1,46 @@
+{
+  "summary": {
+    "total_claims": 5,
+    "machine_verifiable_claims": 2,
+    "verified_count": 1,
+    "incorrect_count": 1,
+    "unsupported_count": 0,
+    "not_machine_verifiable": 3
+  },
+  "metrics": {
+    "source_coverage_rate": 0.4,
+    "primary_source_coverage_rate": 0.5,
+    "unsupported_claim_rate": 0.0,
+    "incorrect_claim_rate": 0.5,
+    "valuation_dispersion": null
+  },
+  "thresholds": {
+    "source_coverage_rate": {"value": 0.4, "target": ">=0.80", "pass": false},
+    "primary_source_coverage_rate": {"value": 0.5, "target": ">=0.90", "pass": false},
+    "unsupported_claim_rate": {"value": 0.0, "target": "<=0.15", "pass": true},
+    "incorrect_claim_rate": {"value": 0.5, "target": "<=0.05", "pass": false}
+  },
+  "by_metric": {
+    "revenue": {
+      "total": 3,
+      "verified": 1,
+      "incorrect": 0,
+      "unsupported": 0,
+      "not_machine_verifiable": 2
+    },
+    "pe_ratio": {
+      "total": 1,
+      "verified": 0,
+      "incorrect": 0,
+      "unsupported": 0,
+      "not_machine_verifiable": 1
+    },
+    "ebitda_margin": {
+      "total": 1,
+      "verified": 0,
+      "incorrect": 1,
+      "unsupported": 0,
+      "not_machine_verifiable": 0
+    }
+  }
+}

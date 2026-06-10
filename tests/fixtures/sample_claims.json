@@ -1,0 +1,67 @@
+[
+  {
+    "claim_text": "Revenue surged from approximately $27 billion in FY2023 to over $60.9 billion in FY2024 — a 125.9% year-over-year increase driven by explosive demand for AI",
+    "claim_type": "financial",
+    "metric": "revenue",
+    "period": "2023",
+    "value": 27000000000.0,
+    "value_display": "$27 billion",
+    "unit": "USD",
+    "source_status": "unverified",
+    "confidence": "medium",
+    "extraction_method": "regex",
+    "ticker": "NVDA"
+  },
+  {
+    "claim_text": "Revenue surged from approximately $27 billion in FY2023 to over $60.9 billion in FY2024",
+    "claim_type": "financial",
+    "metric": "revenue",
+    "period": "2024",
+    "value": 60900000000.0,
+    "value_display": "$60.9 billion",
+    "unit": "USD",
+    "source_status": "unverified",
+    "confidence": "medium",
+    "extraction_method": "regex",
+    "ticker": "NVDA"
+  },
+  {
+    "claim_text": "Trading at a P/E of 37.7x based on forward earnings estimates for 2026",
+    "claim_type": "valuation",
+    "metric": "pe_ratio",
+    "period": "2026",
+    "value": 37.7,
+    "value_display": "37.7x",
+    "unit": "multiple",
+    "source_status": "unverified",
+    "confidence": "medium",
+    "extraction_method": "regex",
+    "ticker": "NVDA"
+  },
+  {
+    "claim_text": "Revenue is projected to reach $215.9 billion in FY2025E, reflecting continued hyperscaler AI infrastructure investment",
+    "claim_type": "guidance",
+    "metric": "revenue",
+    "period": "2025",
+    "value": 215900000000.0,
+    "value_display": "$215.9 billion",
+    "unit": "USD",
+    "source_status": "unverified",
+    "confidence": "low",
+    "extraction_method": "regex",
+    "ticker": "NVDA"
+  },
+  {
+    "claim_text": "EBITDA margin expanded to 64.3% in FY2023 as operating leverage drove profitability",
+    "claim_type": "financial",
+    "metric": "ebitda_margin",
+    "period": "2023",
+    "value": 64.3,
+    "value_display": "64.3%",
+    "unit": "percent",
+    "source_status": "unverified",
+    "confidence": "medium",
+    "extraction_method": "regex",
+    "ticker": "NVDA"
+  }
+]

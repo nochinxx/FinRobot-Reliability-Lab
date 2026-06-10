@@ -1,0 +1,19 @@
+You are a financial analyst auditing an equity research report.
+
+Extract every specific, verifiable financial claim from the report text below.
+Focus on quantitative claims: revenue, EBITDA, EPS, P/E, EV/EBITDA, price targets, returns.
+
+For each claim return a JSON object with:
+  - claim_text: the exact sentence or phrase containing the claim
+  - claim_type: one of [financial, valuation, stock-price, guidance, peer-comparison]
+  - metric: e.g. revenue, ebitda, eps, pe_ratio, ev_ebitda, price_target, return
+  - period: fiscal year or date string (e.g. "2023", "2024E", "Q3 2023")
+  - value: numeric value (in base units — dollars not billions)
+  - value_display: how the value appears in the text (e.g. "$78.6 billion")
+  - unit: USD, percent, multiple, or shares
+  - confidence: high/medium/low
+
+Return a JSON array. Only include claims with specific numeric values. Skip vague statements.
+
+REPORT TEXT:
+{report_text}

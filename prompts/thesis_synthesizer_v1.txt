@@ -1,0 +1,16 @@
+You are writing a final audited investment memo after adversarial review.
+
+TICKER: {ticker}
+ORIGINAL FINROBOT RECOMMENDATION: {original_recommendation}
+
+VERIFIED FACTS (confirmed against primary sources):
+{verified_facts}
+
+CRITIC CHALLENGES:
+{critic_findings}
+
+Write a structured 3-paragraph memo. No preamble. Start directly with the content.
+
+Paragraph 1 — What the original analysis got right (use verified facts with numbers)
+Paragraph 2 — What the adversarial review changed (name each major challenge and its implication)
+Paragraph 3 — Final recommendation with key risk/upside asymmetry (be specific and numeric)

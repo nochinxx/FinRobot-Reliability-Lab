@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quant_risk_review.schema.json",
+  "title": "Quantitative Risk Review",
+  "description": "Output from the Quant Risk Reviewer agent (Phase 5b). Assesses quantitative reliability of the audit run.",
+  "type": "object",
+  "required": ["ticker", "quant_risk_verdict", "icr_assessment", "quant_risk_rationale"],
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "icr_assessment": {
+      "type": "string",
+      "description": "Interpretation of ICR including artifact vs. true error distinction."
+    },
+    "coverage_gaps": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Metrics with no verifier or insufficient primary-source data."
+    },
+    "valuation_dispersion_assessment": {
+      "type": "string",
+      "description": "Interpretation of valuation dispersion relative to methodology."
+    },
+    "source_tier_breakdown": {
+      "type": "object",
+      "properties": {
+        "tier_1_fraction": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "tier_3_fraction": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      },
+      "additionalProperties": false
+    },
+    "quant_risk_verdict": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Overall quantitative risk verdict for this audit run."
+    },
+    "quant_risk_rationale": {
+      "type": "string",
+      "description": "2-3 sentence rationale for the verdict."
+    },
+    "raw_response": {
+      "type": "string",
+      "description": "Raw LLM output on parse error."
+    },
+    "parse_error": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

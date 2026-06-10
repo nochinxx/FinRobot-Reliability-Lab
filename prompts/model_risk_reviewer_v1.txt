@@ -1,0 +1,46 @@
+You are a model risk officer reviewing an AI-generated equity research pipeline for institutional deployment.
+
+PIPELINE METADATA:
+  Ticker: {ticker}
+  Report generator: {report_generator} (e.g. Gemma4 12B MLX via Ollama)
+  Claim extractor: {extractor_model} ({extractor_provider})
+  Adversarial critic: {critic_model} ({critic_provider})
+  Fallback used: {fallback_used}
+  Prompt versions: claim_extractor={claim_prompt_version}, critic={critic_prompt_version}
+
+AUDIT RESULTS SUMMARY:
+  Total claims: {total_claims}
+  Machine-verifiable: {machine_verifiable}
+  Verified: {verified_count}
+  Incorrect: {incorrect_count}
+  ICR: {icr}
+  SCR: {scr}
+
+Your task:
+1. Assess determinism risk — were Anthropic or Ollama models used? Was temperature=0 enforced?
+   If Ollama fallback was used, note that results may not be reproducible across hardware.
+
+2. Assess input sensitivity — given that claim extraction uses a 120-char context window and
+   nearest-year heuristic, which claim types are most likely to be misextracted?
+
+3. Assess coverage gap risk — low SCR means most claims cannot be independently verified.
+   What model-risk controls would be needed before deploying this pipeline in a production setting?
+
+4. Assess prompt stability — if the prompt in {claim_prompt_version} were changed slightly,
+   would the claim count / type distribution shift materially? Rate prompt fragility: low/medium/high.
+
+5. Give a MODEL RISK VERDICT: not-ready / prototype / conditional-production / production-ready
+   with specific conditions that must be met before upgrade.
+
+Return ONLY a JSON object (no markdown fences):
+{
+  "determinism_risk": "low | medium | high",
+  "determinism_notes": "string",
+  "input_sensitivity_risk": "low | medium | high",
+  "input_sensitivity_notes": "string",
+  "coverage_gap_risk": "low | medium | high",
+  "coverage_gap_notes": "string",
+  "prompt_fragility": "low | medium | high",
+  "model_risk_verdict": "not-ready | prototype | conditional-production | production-ready",
+  "conditions_for_upgrade": ["list of specific conditions that must be met"]
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "experiment_manifest.schema.json",
+  "title": "FinRobot Experiment Manifest",
+  "description": "Reproducibility manifest for one backtest or batch audit run. Enables re-running with identical parameters and detecting data drift. Planned for PR3+.",
+  "type": "object",
+  "required": ["experiment_id", "created_at", "tickers", "phases"],
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "description": "Human-readable slug, e.g. 'nvda-tsla-jun2025-baseline'. Unique per run."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "description": {
+      "type": ["string", "null"],
+      "description": "One-line description of what this experiment is testing."
+    },
+    "tickers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{1,5}$"
+      },
+      "minItems": 1,
+      "description": "Tickers included in this run."
+    },
+    "cutoff_dates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "date"
+      },
+      "description": "Data cutoff dates used. For backtests: one per pass. No forward data beyond each cutoff."
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["claim_extraction", "fact_verification", "adversarial_critic", "backtest", "quant_risk_review", "model_risk_review"]
+      },
+      "description": "Pipeline phases executed in this experiment."
+    },
+    "extraction_mode": {
+      "type": ["string", "null"],
+      "enum": ["regex", "llm", "auto", null]
+    },
+    "model_name": {
+      "type": ["string", "null"],
+      "description": "LLM used, e.g. 'claude-sonnet-4-6'. Null for regex-only runs."
+    },
+    "provider": {
+      "type": ["string", "null"],
+      "enum": ["anthropic", "ollama_fallback", "none", null]
+    },
+    "prompt_versions": {
+      "type": "object",
+      "description": "Map of phase to prompt version used, e.g. {'claim_extraction': 'claim_extractor_v1'}.",
+      "additionalProperties": { "type": "string" }
+    },
+    "data_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_name", "tier"],
+        "properties": {
+          "source_name": { "type": "string" },
+          "tier": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "cache_hit": { "type": ["boolean", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to output files produced."
+    },
+    "fallback_used": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if Ollama fallback was triggered. Affects result comparability."
+    },
+    "known_limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Explicit limitations for this run, e.g. 'period_attribution_bug_unfixed', 'sample_n_equals_9'."
+    },
+    "git_sha": {
+      "type": ["string", "null"],
+      "description": "Git commit SHA at time of run for reproducibility."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "backtest_snapshot.schema.json",
+  "title": "Historical Backtest Snapshot",
+  "description": "Results for one (ticker, cutoff_date) backtesting window.",
+  "type": "object",
+  "required": ["ticker", "cutoff_date", "valuation", "returns"],
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "cutoff_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date gate: only FMP financial records strictly on or before this date are used. No forward data leakage."
+    },
+    "price_at_cutoff": {
+      "type": ["number", "null"],
+      "description": "Closing price closest to cutoff_date from yfinance (auto_adjust=True)."
+    },
+    "valuation": {
+      "type": "object",
+      "required": ["signal", "rationale"],
+      "properties": {
+        "pe_ratio": { "type": ["number", "null"], "description": "Most recent P/E from FMP ratios, as of cutoff_date." },
+        "ev_ebitda": { "type": ["number", "null"], "description": "Most recent EV/EBITDA from FMP ratios or key-metrics." },
+        "mean_pe_history": { "type": ["number", "null"], "description": "Mean P/E across all available FMP records before cutoff." },
+        "mean_ev_history": { "type": ["number", "null"], "description": "Mean EV/EBITDA across all available FMP records before cutoff." },
+        "net_profit_margin": { "type": ["number", "null"], "description": "Net profit margin % from most recent FMP record." },
+        "gross_profit_margin": { "type": ["number", "null"], "description": "Gross profit margin % from most recent FMP record." },
+        "profitability_score": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "signal": {
+          "type": "string",
+          "enum": ["buy", "hold", "sell"],
+          "description": "BUY if P/E or EV/EBITDA ≥15% below historical mean. SELL if ≥30% above. HOLD otherwise. This is signal family 1 (valuation-multiple). Distinct from FinRobot recommendation (family 2) and critic-revised (family 3)."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Human-readable explanation of the signal, e.g. 'P/E 39.9x is 39% below historical mean 65.9x'."
+        },
+        "ratio_history_depth": { "type": "integer", "minimum": 0, "description": "Number of historical P/E records available." }
+      },
+      "additionalProperties": false
+    },
+    "fmp_records": {
+      "type": "object",
+      "description": "Count of FMP records available before cutoff_date.",
+      "properties": {
+        "ratios": { "type": "integer" },
+        "cash_flow": { "type": "integer" },
+        "balance_sheet": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "returns": {
+      "type": "object",
+      "description": "Forward returns from cutoff_date.",
+      "properties": {
+        "return_3m": { "type": ["number", "null"], "description": "Total return at +3 months (%), null if not yet available." },
+        "return_6m": { "type": ["number", "null"] },
+        "return_9m": { "type": ["number", "null"] },
+        "return_12m": { "type": ["number", "null"] },
+        "alpha_3m": { "type": ["number", "null"], "description": "Return minus SPY return over same period." },
+        "alpha_6m": { "type": ["number", "null"] },
+        "alpha_9m": { "type": ["number", "null"] },
+        "alpha_12m": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "spy_returns": {
+      "type": "object",
+      "description": "SPY benchmark returns over same horizons.",
+      "properties": {
+        "spy_3m": { "type": ["number", "null"] },
+        "spy_6m": { "type": ["number", "null"] },
+        "spy_9m": { "type": ["number", "null"] },
+        "spy_12m": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

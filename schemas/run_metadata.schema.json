@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run_metadata.schema.json",
+  "title": "Run Metadata",
+  "description": "Provenance and reproducibility metadata for every LLM call and audit run. Planned for implementation in PR2.",
+  "type": "object",
+  "required": ["run_id", "timestamp", "ticker", "phase", "model_name", "provider"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID for this specific run instance."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO8601 timestamp of when the run started."
+    },
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["claim_extraction", "fact_verification", "adversarial_critic", "skeptical_analyst", "thesis_synthesizer", "recommendation_extraction", "backtest", "quant_risk_review", "model_risk_review"],
+      "description": "Which pipeline phase this run belongs to."
+    },
+    "model_name": {
+      "type": "string",
+      "description": "Model identifier, e.g. 'claude-sonnet-4-6', 'gemma4:12b-mlx'."
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["anthropic", "ollama_fallback", "none"],
+      "description": "'none' for deterministic (non-LLM) phases. 'ollama_fallback' outputs must not be aggregated with 'anthropic' outputs."
+    },
+    "temperature": {
+      "type": ["number", "null"],
+      "minimum": 0.0,
+      "maximum": 2.0,
+      "description": "LLM temperature used. Must be 0.0 for all critic/reviewer calls. Null for non-LLM phases."
+    },
+    "prompt_file": {
+      "type": ["string", "null"],
+      "description": "Relative path to the prompt file used, e.g. 'prompts/skeptical_analyst_v1.txt'. Null for non-LLM phases."
+    },
+    "prompt_version": {
+      "type": ["string", "null"],
+      "description": "Version tag from the prompt file name, e.g. 'v1'. Null for non-LLM phases."
+    },
+    "prompt_hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 of the prompt file contents at time of run. Enables detection of accidental prompt changes."
+    },
+    "input_hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 of the actual input sent to the model (report text, claim summary, etc.)."
+    },
+    "output_hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 of the raw model response before any parsing."
+    },
+    "fallback_used": {
+      "type": "boolean",
+      "description": "True if Ollama was used as fallback because Anthropic was unavailable. Affects result comparability."
+    },
+    "source_tier": {
+      "type": ["integer", "null"],
+      "enum": [1, 2, 3, 4, 5, null],
+      "description": "For fact_verification phase: tier of the data source used. Null for LLM phases."
+    },
+    "extraction_mode": {
+      "type": ["string", "null"],
+      "enum": ["regex", "llm", "auto", null],
+      "description": "For claim_extraction phase only."
+    },
+    "claims_extracted": {
+      "type": ["integer", "null"],
+      "description": "Number of claims extracted (claim_extraction phase only)."
+    }
+  },
+  "additionalProperties": false
+}

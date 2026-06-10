@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "critic_findings.schema.json",
+  "title": "Adversarial Critic Findings",
+  "description": "Output from the Skeptical Analyst adversarial review (Phase 5).",
+  "type": "object",
+  "required": ["challenges", "revised_recommendation", "thesis_stability_score"],
+  "properties": {
+    "challenges": {
+      "type": "array",
+      "description": "List of identified weak or incorrect claims.",
+      "items": {
+        "type": "object",
+        "required": ["original_claim", "challenge", "thesis_impact", "severity"],
+        "properties": {
+          "original_claim": {
+            "type": "string",
+            "description": "Exact phrase or sentence from the report being challenged."
+          },
+          "challenge": {
+            "type": "string",
+            "description": "Analyst's reason for doubting this claim."
+          },
+          "likely_actual": {
+            "type": "string",
+            "description": "Analyst's estimate of the actual value, if known."
+          },
+          "thesis_impact": {
+            "type": "string",
+            "enum": ["changes_thesis", "minor_factual", "confirms_thesis"],
+            "description": "Whether this challenge materially changes the investment thesis."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "revised_recommendation": {
+      "type": "string",
+      "enum": ["buy", "hold", "sell", "avoid", "BUY", "HOLD", "SELL", "AVOID"],
+      "description": "Post-critique recommendation from the Skeptical Analyst."
+    },
+    "revised_rationale": {
+      "type": "string",
+      "description": "2-3 sentence rationale for the revised recommendation."
+    },
+    "thesis_stability_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "= 1 - (thesis_changing_challenges / total_challenges). IMPORTANT: This is LLM self-reported. The model classifies its own challenges. It is a proxy, not an objective measurement. 1.0 = unchanged thesis; 0.0 = fully overturned."
+    },
+    "run_metadata": {
+      "$ref": "run_metadata.schema.json",
+      "description": "Provenance metadata for this LLM call. Planned for PR2."
+    },
+    "raw_response": {
+      "type": "string",
+      "description": "Raw LLM output when JSON parsing failed. Present only on parse_error."
+    },
+    "parse_error": {
+      "type": "boolean",
+      "description": "True if JSON parsing of LLM response failed and fallback was used."
+    }
+  },
+  "additionalProperties": false
+}

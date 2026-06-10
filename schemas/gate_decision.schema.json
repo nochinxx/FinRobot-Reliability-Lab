@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gate_decision.schema.json",
+  "title": "FinRobot Gate Decision",
+  "description": "Pass/human-review/fail decision for one audit run. Planned for PR3+. A gate decision is the final output of the reliability scorecard + threshold evaluation.",
+  "type": "object",
+  "required": ["ticker", "decision", "scorecard_ref", "reasons"],
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["PASS", "HUMAN_REVIEW", "FAIL"],
+      "description": "PASS: meets all threshold targets. HUMAN_REVIEW: borderline — analyst should check. FAIL: one or more hard failure conditions met."
+    },
+    "scorecard_ref": {
+      "type": "string",
+      "description": "Path to the reliability_scorecard.json that drove this decision, e.g. 'output/NVDA/NVDA_reliability_scorecard.json'."
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "value", "threshold", "status"],
+        "properties": {
+          "metric": { "type": "string" },
+          "value": { "type": "number" },
+          "threshold": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "warning"]
+          },
+          "note": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "hard_failures": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Any condition that forces FAIL regardless of scorecard. E.g. 'missing_data_cutoff', 'unsupported_recommendation', 'source_hierarchy_violation'."
+    },
+    "human_review_triggers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Conditions that triggered HUMAN_REVIEW. E.g. 'high_valuation_dispersion', 'unresolved_source_conflict', 'icr_above_warning_threshold'."
+    },
+    "timestamp": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

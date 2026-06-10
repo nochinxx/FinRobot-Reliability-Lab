@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model_risk_review.schema.json",
+  "title": "Model Risk Review",
+  "description": "Output from the Model Risk Reviewer agent (Phase 5c). Assesses pipeline-level model risk for institutional deployment.",
+  "type": "object",
+  "required": ["ticker", "model_risk_verdict", "determinism_risk", "input_sensitivity_risk", "coverage_gap_risk", "prompt_fragility"],
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$"
+    },
+    "determinism_risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "determinism_notes": {
+      "type": "string"
+    },
+    "input_sensitivity_risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "input_sensitivity_notes": {
+      "type": "string"
+    },
+    "coverage_gap_risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "coverage_gap_notes": {
+      "type": "string"
+    },
+    "prompt_fragility": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "model_risk_verdict": {
+      "type": "string",
+      "enum": ["not-ready", "prototype", "conditional-production", "production-ready"],
+      "description": "Overall model-risk readiness verdict."
+    },
+    "conditions_for_upgrade": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Specific, measurable conditions that must be met before upgrading the verdict."
+    },
+    "raw_response": {
+      "type": "string"
+    },
+    "parse_error": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reliability_scorecard.schema.json",
+  "title": "FinRobot Reliability Scorecard",
+  "description": "Aggregate reliability metrics for one audit run on one ticker.",
+  "type": "object",
+  "required": ["summary", "metrics", "thresholds", "by_metric"],
+  "properties": {
+    "summary": {
+      "type": "object",
+      "required": ["total_claims", "machine_verifiable_claims", "verified_count", "incorrect_count", "unsupported_count", "not_machine_verifiable"],
+      "properties": {
+        "total_claims": { "type": "integer", "minimum": 0 },
+        "machine_verifiable_claims": {
+          "type": "integer", "minimum": 0,
+          "description": "= verified_count + incorrect_count"
+        },
+        "verified_count": { "type": "integer", "minimum": 0 },
+        "incorrect_count": {
+          "type": "integer", "minimum": 0,
+          "description": "Claims that differ from primary source beyond tolerance. WARNING: may include period attribution artifacts — treat as upper bound on true error rate until manual review."
+        },
+        "unsupported_count": { "type": "integer", "minimum": 0 },
+        "not_machine_verifiable": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["source_coverage_rate", "primary_source_coverage_rate", "unsupported_claim_rate", "incorrect_claim_rate"],
+      "properties": {
+        "source_coverage_rate": {
+          "type": "number", "minimum": 0.0, "maximum": 1.0,
+          "description": "SCR = (verified + incorrect) / total. Fraction of all claims that could be checked against any source."
+        },
+        "primary_source_coverage_rate": {
+          "type": "number", "minimum": 0.0, "maximum": 1.0,
+          "description": "PSCR = verified / machine_verifiable. Of the claims that could be checked, what fraction matched."
+        },
+        "unsupported_claim_rate": {
+          "type": "number", "minimum": 0.0, "maximum": 1.0,
+          "description": "UCR = unsupported / total."
+        },
+        "incorrect_claim_rate": {
+          "type": "number", "minimum": 0.0, "maximum": 1.0,
+          "description": "ICR = incorrect / machine_verifiable. CAUTION: includes period attribution artifacts. Not a true hallucination rate."
+        },
+        "valuation_dispersion": {
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "description": "VD = stdev(multiples) / mean(multiples). Null if fewer than 2 valuation multiples extracted."
+        }
+      },
+      "additionalProperties": false
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Pass/fail evaluation against configured targets. Current targets represent a future goal state, not typical current performance.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["value", "target", "pass"],
+        "properties": {
+          "value": { "type": "number" },
+          "target": { "type": "string" },
+          "pass": { "type": "boolean" }
+        }
+      }
+    },
+    "by_metric": {
+      "type": "object",
+      "description": "Per-metric breakdown of claim counts.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["total", "verified", "incorrect", "unsupported", "not_machine_verifiable"],
+        "properties": {
+          "total": { "type": "integer" },
+          "verified": { "type": "integer" },
+          "incorrect": { "type": "integer" },
+          "unsupported": { "type": "integer" },
+          "not_machine_verifiable": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
