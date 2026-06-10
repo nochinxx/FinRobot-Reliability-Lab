@@ -16,8 +16,12 @@ from reliability_lab.critics.valuation_agent import run_valuation_analysis
 from reliability_lab.critics.coherence_agent import run_coherence_analysis
 from reliability_lab.critics.multi_agent_synthesizer import run_multi_agent_review, _aggregate_verdicts
 
-_LLM = "reliability_lab.critic_agents._llm_call"
-_LOAD_PROMPT = "reliability_lab.claim_extraction._load_prompt"
+_LLM_EARNINGS = "reliability_lab.critics.earnings_analyst._llm_call"
+_PROMPT_EARNINGS = "reliability_lab.critics.earnings_analyst._load_prompt"
+_LLM_VALUATION = "reliability_lab.critics.valuation_agent._llm_call"
+_PROMPT_VALUATION = "reliability_lab.critics.valuation_agent._load_prompt"
+_LLM_COHERENCE = "reliability_lab.critics.coherence_agent._llm_call"
+_PROMPT_COHERENCE = "reliability_lab.critics.coherence_agent._load_prompt"
 
 _SAMPLE_FACT_ROWS = [
     {"ticker": "NVDA", "metric": "revenue", "period": "2023",
@@ -74,8 +78,8 @@ class TestEarningsAnalyst:
             "earnings_quality_verdict": "medium",
             "earnings_quality_rationale": "Revenue accurate, one forward projection issue.",
         })
-        with patch(_LLM, return_value=(mock_response, "anthropic", "claude-test")), \
-             patch(_LOAD_PROMPT, return_value="template {ticker} {earnings_rows} {scorecard_summary}"):
+        with patch(_LLM_EARNINGS, return_value=(mock_response, "anthropic", "claude-test")), \
+             patch(_PROMPT_EARNINGS, return_value="template {ticker} {earnings_rows} {scorecard_summary}"):
             result = run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result is not None
         assert result["earnings_quality_verdict"] == "medium"
@@ -86,34 +90,34 @@ class TestEarningsAnalyst:
         rows = [{"metric": "peer_comparison", "period": "2023",
                  "claimed_value": "x", "verified_value": "",
                  "verification_status": "not_machine_verifiable"}]
-        with patch(_LLM, return_value=('{"earnings_quality_verdict":"low","earnings_quality_rationale":"test"}',
+        with patch(_LLM_EARNINGS, return_value=('{"earnings_quality_verdict":"low","earnings_quality_rationale":"test"}',
                                         "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
+             patch(_PROMPT_EARNINGS, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
             result = run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, rows, str(tmp_path))
         assert result["_computed"]["earnings_claims_total"] == 0
 
     def test_returns_none_when_no_llm(self, tmp_path):
-        with patch(_LLM, return_value=("", "", "")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
+        with patch(_LLM_EARNINGS, return_value=("", "", "")), \
+             patch(_PROMPT_EARNINGS, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
             result = run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result is None
 
     def test_returns_none_when_prompt_missing(self, tmp_path):
-        with patch(_LOAD_PROMPT, side_effect=FileNotFoundError("missing")):
+        with patch(_PROMPT_EARNINGS, side_effect=FileNotFoundError("missing")):
             result = run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result is None
 
     def test_handles_malformed_json(self, tmp_path):
-        with patch(_LLM, return_value=("not json", "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
+        with patch(_LLM_EARNINGS, return_value=("not json", "anthropic", "test")), \
+             patch(_PROMPT_EARNINGS, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
             result = run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result is not None
         assert "earnings_quality_verdict" in result
 
     def test_writes_output_file(self, tmp_path):
         mock_json = '{"earnings_quality_verdict":"high","earnings_quality_rationale":"great"}'
-        with patch(_LLM, return_value=(mock_json, "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
+        with patch(_LLM_EARNINGS, return_value=(mock_json, "anthropic", "test")), \
+             patch(_PROMPT_EARNINGS, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
             run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert (tmp_path / "NVDA_earnings_analysis.json").exists()
 
@@ -124,9 +128,9 @@ class TestEarningsAnalyst:
             {"metric": "eps", "period": "2023", "claimed_value": "$6",
              "verified_value": "$10", "verification_status": "incorrect"},
         ]
-        with patch(_LLM, return_value=('{"earnings_quality_verdict":"low","earnings_quality_rationale":"x"}',
+        with patch(_LLM_EARNINGS, return_value=('{"earnings_quality_verdict":"low","earnings_quality_rationale":"x"}',
                                         "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
+             patch(_PROMPT_EARNINGS, return_value="x {ticker} {earnings_rows} {scorecard_summary}"):
             result = run_earnings_analysis("NVDA", _SAMPLE_SCORECARD, rows, str(tmp_path))
         assert result["_computed"]["earnings_icr"] == 0.5
         assert result["_computed"]["earnings_verified"] == 1
@@ -147,8 +151,8 @@ class TestValuationAgent:
             "valuation_verdict": "questionable",
             "valuation_rationale": "High VD despite reasonable individual multiples.",
         })
-        with patch(_LLM, return_value=(mock_response, "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {sector} {valuation_rows} "
+        with patch(_LLM_VALUATION, return_value=(mock_response, "anthropic", "test")), \
+             patch(_PROMPT_VALUATION, return_value="x {ticker} {sector} {valuation_rows} "
                                               "{valuation_dispersion} {scorecard_summary}"):
             result = run_valuation_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result is not None
@@ -156,24 +160,24 @@ class TestValuationAgent:
         assert result["_computed"]["sector"] == "Technology"
 
     def test_infers_sector(self, tmp_path):
-        with patch(_LLM, return_value=('{"valuation_verdict":"sound","valuation_rationale":"ok"}',
+        with patch(_LLM_VALUATION, return_value=('{"valuation_verdict":"sound","valuation_rationale":"ok"}',
                                         "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {sector} {valuation_rows} "
+             patch(_PROMPT_VALUATION, return_value="x {ticker} {sector} {valuation_rows} "
                                               "{valuation_dispersion} {scorecard_summary}"):
             result = run_valuation_analysis("JPM", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result["_computed"]["sector"] == "Finance"
 
     def test_returns_none_on_no_llm(self, tmp_path):
-        with patch(_LLM, return_value=("", "", "")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {sector} {valuation_rows} "
+        with patch(_LLM_VALUATION, return_value=("", "", "")), \
+             patch(_PROMPT_VALUATION, return_value="x {ticker} {sector} {valuation_rows} "
                                               "{valuation_dispersion} {scorecard_summary}"):
             result = run_valuation_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result is None
 
     def test_writes_output_file(self, tmp_path):
-        with patch(_LLM, return_value=('{"valuation_verdict":"sound","valuation_rationale":"x"}',
+        with patch(_LLM_VALUATION, return_value=('{"valuation_verdict":"sound","valuation_rationale":"x"}',
                                         "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {sector} {valuation_rows} "
+             patch(_PROMPT_VALUATION, return_value="x {ticker} {sector} {valuation_rows} "
                                               "{valuation_dispersion} {scorecard_summary}"):
             run_valuation_analysis("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert (tmp_path / "NVDA_valuation_analysis.json").exists()
@@ -194,8 +198,8 @@ class TestCoherenceAgent:
             "final_disposition": "Use with analyst review of P/E and forward projection claims.",
         })
         gate = {"decision": "HUMAN_REVIEW"}
-        with patch(_LLM, return_value=(mock_response, "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {recommendation} {icr} {scr} "
+        with patch(_LLM_COHERENCE, return_value=(mock_response, "anthropic", "test")), \
+             patch(_PROMPT_COHERENCE, return_value="x {ticker} {recommendation} {icr} {scr} "
                                               "{gate_decision} {scorecard_summary} "
                                               "{quant_risk_verdict} {model_risk_verdict} "
                                               "{earnings_quality_verdict} {valuation_verdict}"):
@@ -212,10 +216,10 @@ class TestCoherenceAgent:
         (tmp_path / "NVDA_earnings_analysis.json").write_text(
             json.dumps({"earnings_quality_verdict": "low"})
         )
-        with patch(_LLM, return_value=('{"signal_reliability":"unreliable","coherence_rationale":"x",'
+        with patch(_LLM_COHERENCE, return_value=('{"signal_reliability":"unreliable","coherence_rationale":"x",'
                                         '"coherence_flags":[],"final_disposition":"no"}',
                                         "anthropic", "test")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {recommendation} {icr} {scr} "
+             patch(_PROMPT_COHERENCE, return_value="x {ticker} {recommendation} {icr} {scr} "
                                               "{gate_decision} {scorecard_summary} "
                                               "{quant_risk_verdict} {model_risk_verdict} "
                                               "{earnings_quality_verdict} {valuation_verdict}"):
@@ -225,8 +229,8 @@ class TestCoherenceAgent:
         assert result["_computed"]["specialist_verdicts"]["earnings_quality_verdict"] == "low"
 
     def test_returns_none_on_no_llm(self, tmp_path):
-        with patch(_LLM, return_value=("", "", "")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {recommendation} {icr} {scr} "
+        with patch(_LLM_COHERENCE, return_value=("", "", "")), \
+             patch(_PROMPT_COHERENCE, return_value="x {ticker} {recommendation} {icr} {scr} "
                                               "{gate_decision} {scorecard_summary} "
                                               "{quant_risk_verdict} {model_risk_verdict} "
                                               "{earnings_quality_verdict} {valuation_verdict}"):
@@ -268,32 +272,35 @@ class TestMultiAgentSynthesizer:
         assert result["panel_verdict"] == "ACCEPTABLE"
         assert result["specialist_verdicts"] == {}
 
+    _PROMPT_TMPL = ("x {ticker} {earnings_rows} {scorecard_summary} "
+                    "{sector} {valuation_rows} {valuation_dispersion} "
+                    "{recommendation} {icr} {scr} {gate_decision} "
+                    "{quant_risk_verdict} {model_risk_verdict} "
+                    "{earnings_quality_verdict} {valuation_verdict}")
+
     def test_full_review_runs(self, tmp_path):
-        mock_resp = '{"earnings_quality_verdict":"medium","earnings_quality_rationale":"ok"}'
-        mock_val = '{"valuation_verdict":"sound","valuation_rationale":"ok"}'
-        mock_coh = ('{"signal_reliability":"conditional","coherence_rationale":"ok",'
-                    '"coherence_flags":[],"final_disposition":"review"}')
-        with patch(_LLM, side_effect=[
-            (mock_resp, "anthropic", "test"),
-            (mock_val, "anthropic", "test"),
-            (mock_coh, "anthropic", "test"),
-        ]), patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary} "
-                                             "{sector} {valuation_rows} {valuation_dispersion} "
-                                             "{recommendation} {icr} {scr} {gate_decision} "
-                                             "{quant_risk_verdict} {model_risk_verdict} "
-                                             "{earnings_quality_verdict} {valuation_verdict}"):
+        mock_e = '{"earnings_quality_verdict":"medium","earnings_quality_rationale":"ok"}'
+        mock_v = '{"valuation_verdict":"sound","valuation_rationale":"ok"}'
+        mock_c = ('{"signal_reliability":"conditional","coherence_rationale":"ok",'
+                  '"coherence_flags":[],"final_disposition":"review"}')
+        with patch(_LLM_EARNINGS, return_value=(mock_e, "anthropic", "test")), \
+             patch(_PROMPT_EARNINGS, return_value=self._PROMPT_TMPL), \
+             patch(_LLM_VALUATION, return_value=(mock_v, "anthropic", "test")), \
+             patch(_PROMPT_VALUATION, return_value=self._PROMPT_TMPL), \
+             patch(_LLM_COHERENCE, return_value=(mock_c, "anthropic", "test")), \
+             patch(_PROMPT_COHERENCE, return_value=self._PROMPT_TMPL):
             result = run_multi_agent_review("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result["ticker"] == "NVDA"
         assert len(result["agents_run"]) == 3
         assert (tmp_path / "NVDA_multi_agent_review.json").exists()
 
     def test_skips_agents_on_no_llm(self, tmp_path):
-        with patch(_LLM, return_value=("", "", "")), \
-             patch(_LOAD_PROMPT, return_value="x {ticker} {earnings_rows} {scorecard_summary} "
-                                              "{sector} {valuation_rows} {valuation_dispersion} "
-                                              "{recommendation} {icr} {scr} {gate_decision} "
-                                              "{quant_risk_verdict} {model_risk_verdict} "
-                                              "{earnings_quality_verdict} {valuation_verdict}"):
+        with patch(_LLM_EARNINGS, return_value=("", "", "")), \
+             patch(_PROMPT_EARNINGS, return_value=self._PROMPT_TMPL), \
+             patch(_LLM_VALUATION, return_value=("", "", "")), \
+             patch(_PROMPT_VALUATION, return_value=self._PROMPT_TMPL), \
+             patch(_LLM_COHERENCE, return_value=("", "", "")), \
+             patch(_PROMPT_COHERENCE, return_value=self._PROMPT_TMPL):
             result = run_multi_agent_review("NVDA", _SAMPLE_SCORECARD, _SAMPLE_FACT_ROWS, str(tmp_path))
         assert result["agents_run"] == []
         assert len(result["agents_skipped"]) == 3
