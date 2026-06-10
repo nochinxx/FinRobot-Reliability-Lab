@@ -1,4 +1,42 @@
 
+---
+
+# FinRobot Reliability Lab
+
+> **This fork adds an auditable trust and model-risk layer on top of FinRobot.**  
+> Does not modify upstream agents — observes outputs and runs parallel deterministic verification.  
+> Target audience: quant / financial risk / model-risk / AI research infrastructure teams.
+
+### Key results (10-stock benchmark, Jun 2026)
+- Revenue accuracy: all correctly-attributed historical claims within **0.15%** of SEC EDGAR
+- Source coverage: **2–4%** (SEC only) → **16–51%** (FMP integrated, 7–25× improvement)  
+- Backtest (27 obs, 3 cutoff dates): BUY **+16.5%** 6m vs HOLD **−16.4%** (**+32.9pp** spread)
+- 723 claims across 10 tickers — **13.6% verified** (60 LOCKED Tier 1 + 38 PROVISIONAL Tier 3)
+
+### Quick start
+```bash
+conda run -n agent python run_reliability_audit.py --ticker NVDA --mode regex
+conda run -n agent python run_reliability_audit.py --ticker NVDA --mode auto --critic --gate --annotate
+conda run -n agent python run_master_fact_table.py   # merge all ticker fact tables
+conda run -n agent python -m pytest tests/           # 225 offline tests
+```
+
+### Pipeline
+```
+Phase 1  Claim extraction (regex + HTML table parser + LLM)
+Phase 2  Fact verification (SEC EDGAR Tier 1 + FMP Tier 3, SOURCE_CONFLICT detection)
+Phase 3  Reliability scorecard (SCR / PSCR / UCR / ICR / VD)
+Phase 3b Gate decision (PASS / HUMAN_REVIEW / FAIL)
+Phase 4b Annotated HTML report (--annotate)
+Phase 5  Adversarial critic panel (--critic): Skeptical Analyst, Quant Risk, Model Risk
+Phase 7  Investment committee memo (--memo)
+```
+
+See [`paper/reliability_audit_paper.md`](paper/reliability_audit_paper.md) for the full write-up.  
+See [`CLAUDE.md`](CLAUDE.md) for agent operating rules and sprint tracker.
+
+---
+
 # FinRobot: An Open-Source AI Agent Platform for Financial Analysis using Large Language Models
 [![Downloads](https://static.pepy.tech/badge/finrobot)]([https://pepy.tech/project/finrobot](https://pepy.tech/project/finrobot))
 [![Downloads](https://static.pepy.tech/badge/finrobot/week)](https://pepy.tech/project/finrobot)

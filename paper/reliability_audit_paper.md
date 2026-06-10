@@ -8,7 +8,7 @@ Contact: mariojillesca@gmail.com
 
 ## Abstract
 
-Large language model (LLM) systems are increasingly used to generate institutional-quality equity research reports, yet no systematic framework exists for auditing their factual reliability. We introduce the **FinRobot Reliability Audit Layer** — a deterministic verification pipeline that evaluates LLM-generated equity reports against primary financial data sources (SEC EDGAR, yFinance, Financial Modeling Prep) and computes a structured reliability scorecard. Applied to FinRobot, an open-source multi-agent financial AI platform, we audit reports for 10 stocks across two phases (Phase 1: NVDA, TSLA, META, MSFT, COP; Phase 2: ETSY, ROKU, RIVN, RBLX, LCID). With SEC EDGAR alone, source coverage rates are 2–4%. Adding Financial Modeling Prep integration increases coverage to 16–51% (7–25x improvement). All correctly-attributed historical revenue claims verify within 0.15% of primary sources. A date-gated historical backtesting module across 9 tickers × 3 cutoff dates (27 observations, Jun–Dec 2025) shows BUY signals produced +16.5% average 6-month return vs. -16.4% for HOLD signals (+32.9pp spread; +4.9% vs. -27.9% alpha). An adversarial critic layer (Phase 5) running Skeptical Analyst and Thesis Synthesizer agents identified thesis-changing inaccuracies in all 3 tested reports (NVDA, TSLA, META) with thesis stability scores of 0.15–0.25; post-critique recommendations diverged from original in 1 of 3 cases (TSLA HOLD → SELL). We propose reliability scoring as a prerequisite for deploying LLM financial agents in any context where incorrect claims carry real decision weight.
+Large language model (LLM) systems are increasingly used to generate institutional-quality equity research reports, yet no systematic framework exists for auditing their factual reliability. We introduce the **FinRobot Reliability Audit Layer** — a deterministic verification pipeline that evaluates LLM-generated equity reports against primary financial data sources (SEC EDGAR, yFinance, Financial Modeling Prep) and computes a structured reliability scorecard. Applied to FinRobot, an open-source multi-agent financial AI platform, we audit 723 claims across 10 stocks in two phases (Phase 1: NVDA, TSLA, META, MSFT, COP; Phase 2: ETSY, ROKU, RIVN, RBLX, LCID). With SEC EDGAR alone, source coverage rates are 2–4%. Adding Financial Modeling Prep integration and an HTML table parser increases coverage to 16–56% (7–28× improvement). All correctly-attributed historical revenue claims verify within 0.15% of primary sources. A date-gated historical backtesting module across 9 tickers × 3 cutoff dates (27 observations, Jun–Dec 2025) shows BUY signals produced +16.5% average 6-month return vs. −16.4% for HOLD signals (+32.9pp spread; +4.9% vs. −27.9% alpha). A multi-agent critic panel (Phase 5) — comprising a Skeptical Analyst, Quant Risk Reviewer, and Model Risk Reviewer — identified thesis-changing inaccuracies in all 3 tested Phase 1 reports (thesis stability 0.15–0.25; TSLA downgraded HOLD→SELL post-critique). Phase 2 analysis reveals that high ICR in Gemma4-generated reports is not solely an extraction artifact: the HTML table parser surfaces genuine hallucinations in forward projections (EBITDA margins of 43–72% claimed vs. ~9% actual for ETSY/ROKU). Across 723 total claims, 13.6% verified against primary sources (60 LOCKED Tier 1, 38 PROVISIONAL Tier 3). We propose reliability scoring as a prerequisite for deploying LLM financial agents in any context where incorrect claims carry real decision weight.
 
 **Keywords:** LLM reliability, financial AI, multi-agent systems, fact verification, equity research, FinRobot
 
@@ -79,77 +79,85 @@ The reliability audit layer sits between FinRobot's report generation pipeline a
 ```
 FinRobot Pipeline
    ↓
-[Report HTML/PDF]
+[Report HTML]
    ↓
-[Claim Extractor] ──→ claims.json
+[Claim Extractor]  ─── regex + HTML table parser + LLM ──→  claims.json
    ↓
-[Fact Table Builder] ──→ fact_table.csv
-   ├── Price Verifier (yfinance)
-   ├── SEC Verifier (EDGAR API)
-   └── [Future: FMP Verifier, Analyst Consensus Verifier]
+[Fact Table Builder]  ─── SOURCE_CONFLICT detection ──→  fact_table.csv
+   ├── SEC EDGAR Verifier  (Tier 1: revenue, EBITDA)
+   ├── FMP Verifier        (Tier 3: EPS, P/E, EV/EBITDA, margins, FCF)
+   └── Price Verifier      (yfinance: returns)
    ↓
-[Reliability Metrics Engine] ──→ reliability_scorecard.json
+[Reliability Scorecard]  ──→  reliability_scorecard.json
    ↓
-[Adversarial Critique Agent] ──→ audit_summary.md
+[Gate Decision]  ──→  gate_decision.json   (PASS / HUMAN_REVIEW / FAIL)
    ↓
-[Report Annotator] ──→ annotated_report.html
+[Annotated HTML Report]  ──→  annotated_report.html
+   ↓
+[Critic Panel]
+   ├── Phase 5a: Skeptical Analyst + Thesis Synthesizer  ──→  critic_findings.json
+   ├── Phase 5b: Quant Risk Reviewer  ──→  quant_risk_review.json
+   └── Phase 5c: Model Risk Reviewer  ──→  model_risk_review.json
+   ↓
+[Investment Committee Memo]  ──→  {TICKER}_investment_committee_memo.md
 ```
 
-### 3.2 Claim Extraction (Phase 2)
+### 3.2 Claim Extraction (Phase 1)
 
-We classify claims in equity reports into four types:
+We classify claims in equity reports into eight types: financial, valuation, stock-price, guidance, peer-comparison, catalyst, risk, narrative.
 
-| Type | Example | Verification approach |
-|------|---------|----------------------|
-| Quantitative | "Revenue was $44.9B in FY2024" | Direct match against SEC EDGAR / FMP |
-| Return-based | "Stock returned +239% over the past year" | yfinance price data with ±2% tolerance |
-| Qualitative | "NVDA dominates the data center GPU market" | Analyst consensus scoring (Phase 5) |
-| Predictive | "We forecast 15% revenue growth in FY2025" | Deferred — compare against actuals when available |
+| Extraction method | Description | Best for |
+|------------------|-------------|---------|
+| **regex** | Deterministic pattern matching on stripped HTML text | Fast, reproducible, no API cost |
+| **LLM** | Claude (claude-sonnet-4-6) structured JSON output | Handles complex multi-year sentences |
+| **table_parser** | Structural `<table>` parsing preserving column headers | Gemma4/short-narrative reports |
 
-Extraction is performed using Claude (claude-sonnet-4-6) with structured JSON output. The prompt is designed to elicit claim type, metric name, time period, stated value, and confidence level.
+All three methods run by default: regex and table_parser always; LLM when `ANTHROPIC_API_KEY` is set. Table-parsed claims supplement regex/LLM claims for any (metric, period) pair not already covered, preventing double-counting.
 
-### 3.3 Fact Table Builder
+### 3.3 Fact Table Builder + SOURCE_CONFLICT Detection
 
-Each extracted claim is written to a row in `fact_table.csv`:
+Each claim produces one row in `fact_table.csv`. For metrics with both a Tier 1 and Tier 3 verifier (currently EBITDA: SEC EDGAR op.income+D&A vs FMP net_income+D&A), both verifiers run and the results are compared:
 
-```
-ticker | claim_type | metric | period | claimed_value | verified_value | source | verification_status | notes
-```
+- **Within tolerance**: Tier 1 value recorded; `source_tier=1`, `verification_status=verified`
+- **Beyond tolerance**: `verification_status=SOURCE_CONFLICT`; both values recorded (`verified_value`, `verified_value_alt`); `conflict_details` JSON captures the delta
 
-`verification_status` takes values: `verified`, `incorrect`, `unsupported`, `not_applicable`.
+Tier 1 always wins for the primary value. The conflict is flagged for human review.
 
 ### 3.4 Verification Sources
 
-**SEC EDGAR (free, no key):** Company facts JSON endpoint provides quarterly and annual financial data (revenue, net income, EPS, shares outstanding, assets, liabilities) directly from 10-K/10-Q filings.
+| Source | Tier | Key | Metrics covered |
+|--------|------|-----|-----------------|
+| SEC EDGAR XBRL | 1 | None | Revenue, EBITDA proxy (op.income+D&A) |
+| yfinance | 1 | None | Price returns |
+| FMP free tier | 3 | 250 req/day | EPS, P/E, EV/EBITDA, gross/net/EBITDA margins, FCF, total debt, market cap |
 
-**yfinance (free, no key):** Historical price data for return verification. Tolerance: ±2% for annual returns, ±0.5% for specific period returns.
-
-**Financial Modeling Prep (FMP) (free tier: 250 req/day):** Supplementary financial statements, DCF estimates, analyst price targets. Used to cross-verify SEC data and validate valuation assumptions.
-
-**FinnHub (free tier: 60 req/min):** Company news and financial summaries. Used for qualitative claim context.
+When Tier 1 and Tier 3 values disagree beyond tolerance: `SOURCE_CONFLICT` recorded, Tier 1 wins.
 
 ### 3.5 Reliability Metrics
 
-| Metric | Formula | Target |
-|--------|---------|--------|
-| Source Coverage Rate (SCR) | verified_claims / total_claims | ≥ 0.80 |
-| Primary Source Coverage Rate (PSCR) | primary_source_claims / total_quantitative_claims | ≥ 0.90 |
-| Unsupported Claim Rate (UCR) | unsupported_claims / total_claims | ≤ 0.15 |
-| Incorrect Claim Rate (ICR) | incorrect_claims / verified_claims | ≤ 0.05 |
-| Factual Conflict Rate (FCR) | conflicting_claims / claim_pairs | ≤ 0.02 |
-| Valuation Dispersion (VD) | σ(DCF estimates across runs) / μ(DCF estimates) | ≤ 0.10 |
-| Catalyst Agreement Score (CAS) | matching_catalysts / total_catalysts (across N runs) | ≥ 0.70 |
-| Thesis Stability Score (TSS) | cosine_sim(thesis_embedding_run1, thesis_embedding_run2) | ≥ 0.85 |
-| Adversarial Critique Acceptance Rate (ACAR) | accepted_critiques / total_critiques_raised | [diagnostic] |
+Five metrics are computed and scored against targets:
 
-### 3.6 Adversarial Critique Agent
+| Metric | Formula | Target | Gate condition |
+|--------|---------|--------|----------------|
+| SCR (Source Coverage Rate) | (verified + incorrect) / total | ≥ 0.80 | FAIL if < 0.10 |
+| PSCR (Primary Source Coverage) | verified / machine-verifiable | ≥ 0.90 | — |
+| UCR (Unsupported Claim Rate) | unsupported / total | ≤ 0.15 | — |
+| ICR (Incorrect Claim Rate) | incorrect / machine-verifiable | ≤ 0.05 | FAIL if > 0.15 |
+| VD (Valuation Dispersion) | σ / μ of valuation multiples | ≤ 0.10 | HUMAN_REVIEW if > 0.10 |
 
-A second Claude agent reads the FinRobot report and the fact table, then applies adversarial analysis:
-- "What assumptions in this report are most likely to be wrong?"
-- "Which claims have the weakest source support?"
-- "Where does the narrative contradict the data?"
+**Gate policy**: FAIL if ICR > 0.15 or SCR < 0.10 or SOURCE_CONFLICT ratio > 20%. HUMAN_REVIEW if any target fails or any SOURCE_CONFLICT present.
 
-The agent outputs structured critiques. Human review determines acceptance. ACAR is diagnostic — a high rate suggests the report is brittle; a low rate (with non-trivial critiques raised) suggests robustness.
+### 3.6 Critic Panel (Phase 5)
+
+Three LLM-based agents run when `--critic` is passed:
+
+**Phase 5a — Adversarial Critic** (`critic_agents.py`): Skeptical Analyst identifies 3–5 weakest claims with severity labels; Thesis Synthesizer produces an audited investment memo. Thesis Stability Score = 1 − (thesis-changing challenges / total challenges). Uses Anthropic Claude (temperature=0) with Ollama Gemma4 12B fallback.
+
+**Phase 5b — Quant Risk Reviewer** (`critics/quant_risk_reviewer.py`): Assesses ICR as artifact vs. true error, identifies coverage gaps by metric, computes source-tier breakdown. Verdict: `low / medium / high`.
+
+**Phase 5c — Model Risk Reviewer** (`critics/model_risk_reviewer.py`): Assesses determinism risk (temperature, provider), input sensitivity (context window heuristics), prompt fragility. Verdict: `not-ready / prototype / conditional-production / production-ready`.
+
+All critic calls log provenance via `run_metadata.jsonl` (model name, provider, temperature, prompt version, prompt hash, input/output hashes).
 
 ---
 
@@ -281,6 +289,20 @@ TSLA's 0.737 dispersion is the highest, consistent with real-world observations 
 3. **FMP verifiers for multiples**: EPS, P/E, and EV/EBITDA now actively verified for claims with period ≤ 2025.
 
 **v0.2 SCR by ticker (Phase 1):** COP 16.3%, MSFT 29.0%, META 37.5%, NVDA 30.0%, TSLA 50.5%.
+
+**v0.4 — With HTML table parser (Jun 9, 2026)**
+
+The HTML table parser (`reliability_lab/ingestion/html_tables.py`) extracts structurally-attributed claims from `<table>` elements, bypassing the linearization artifact. Phase 1 re-audit with table parser active:
+
+| Ticker | Claims | MV | Verified | Incorrect | SCR | ICR | VD | ICR driver |
+|--------|--------|-----|----------|-----------|-----|-----|----|------------|
+| COP | 92 | 15 | 3 | 12 | 0.163 | 0.800 | 0.532 | revenue_growth (91%) |
+| MSFT | 103 | 42 | 12 | 30 | 0.408 | 0.714 | 0.522 | revenue_growth + ebitda_margin |
+| META | 113 | 43 | 18 | 25 | 0.381 | 0.581 | 0.303 | revenue_growth + ebitda_margin |
+| NVDA | 106 | 36 | 23 | 13 | 0.340 | 0.361 | 0.484 | revenue_growth + ev_ebitda |
+| TSLA | 103 | 58 | 23 | 35 | 0.563 | 0.603 | 0.659 | revenue_growth + ebitda_margin |
+
+**ICR driver analysis**: Across all five tickers, `revenue_growth` and `ebitda_margin` at period=2025 account for the majority of incorrect claims. These are FinRobot forward projections now verifiable against 2025 actuals (reports generated March 2026, FY2025 data now in FMP). This is a genuine finding: FinRobot's projected revenue growth rates for 2025 diverged significantly from actual growth rates. Revenue *levels* (see Section 5.2) remain highly accurate; it is the *growth rates* and *margin projections* that contain meaningful errors.
 
 The remaining NMV claims (50–84%) are dominated by forward guidance (years 2026+) and claims the regex extractor mislabels as guidance due to context keywords. LLM-based extraction (Section 3.2) reduces this by correctly distinguishing historical from projected figures.
 
