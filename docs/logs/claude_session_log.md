@@ -401,3 +401,26 @@ conda run -n agent python -m pytest tests/ -v
 - PDF generation blocked (pango library missing); paper exists as .html and .md
 
 **Final state: 453 offline tests passing, F1–F3 complete, commit b53ae20 pushed**
+
+---
+
+## 2026-06-10 (2) — G1+G2 Sprint: Ticker Universe, Batch Generator, Multi-Agent Panel
+
+### G1: 100-Stock Expansion
+- `docs/ticker_universe.md`: 90 new tickers in 3 batches (A: 30, B: 30, C: 30). Sectors: Tech, Healthcare, Finance, Consumer, Industrials, Communication, Materials, Real Estate, Utilities. Each ticker includes peer set for FinRobot report generation.
+- `run_batch_report_generator.py`: generates FinRobot HTML reports via Gemma4/Ollama; `--batch A/B/C` or `--tickers` flags; `--dry-run` verified; copies `Professional_Equity_Report_{TICKER}.html` to top-level (where audit expects it).
+- Next: Run `python run_batch_report_generator.py --batch A` overnight to generate Batch A reports.
+
+### G2: Multi-Agent Verification Layer
+- `earnings_analyst.py`: audits revenue/EPS/margin claims; computes earnings_icr; verdict: high/medium/low
+- `valuation_agent.py`: checks P/E/EV/EBITDA reasonableness; sector-aware PE ranges; verdict: sound/questionable/unreliable
+- `coherence_agent.py`: checks BUY/recommendation vs. ICR/SCR/gate; reads prior critic outputs; verdict: reliable/conditional/unreliable
+- `multi_agent_synthesizer.py`: runs all 3 agents; aggregates → panel_verdict: CONCERN/REVIEW/ACCEPTABLE
+- 3 prompts in `prompts/` (earnings_analyst_v1, valuation_agent_v1, coherence_agent_v1)
+- `run_reliability_audit.py`: `--agents` flag added (Phase 8)
+- `tests/test_multi_agent_critics.py`: 20 tests written; pending sandbox verification
+
+### SwiPR delegation
+- `~/Code/SwiPR/AGENTS.md` updated with new sprint items: BYOK first, transactional emails, DB transaction safety (F1 visa-neutral key storage), 4 view mode ports from PRs-on-edge
+
+**Commits: 98a775e pushed**
