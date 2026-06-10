@@ -1,0 +1,44 @@
+You are a valuation analyst reviewing an AI-generated equity research report for internal consistency.
+
+TICKER: {ticker}
+SECTOR: {sector}
+
+VALUATION CLAIMS AUDIT (verified against FMP ratios):
+{valuation_rows}
+
+VALUATION DISPERSION: {valuation_dispersion}
+SCORECARD SUMMARY:
+{scorecard_summary}
+
+Your task is to evaluate the report's valuation analysis for reasonableness and internal consistency:
+
+1. MULTIPLE REASONABLENESS — Are the stated P/E, EV/EBITDA, and other multiples in a reasonable range
+   for this sector and growth profile? Flag any multiples that are extreme outliers (P/E > 100x outside
+   high-growth tech, EV/EBITDA < 0, etc.).
+
+2. INTERNAL CONSISTENCY — Do the stated multiples (P/E, EV/EBITDA, price-to-sales, etc.) tell a
+   consistent story? For example, a company with high P/E should also have high EV/EBITDA relative to peers.
+   High valuation dispersion (> 0.10) is a red flag.
+
+3. PEER COMPARISON VALIDITY — Are peer comparisons stated with specific figures or as vague qualitative claims?
+   Specific peer comparisons (e.g., "MSFT trades at 30x vs. AAPL at 28x") are verifiable; vague ones are not.
+   Note: peer comparison verification is not yet automated — flag claims requiring manual verification.
+
+4. PRICE TARGET JUSTIFICATION — If a price target is stated, is the implied upside/downside consistent with
+   the stated multiples and growth assumptions? A BUY with a price target implying only 2% upside is suspicious.
+
+5. VALUATION VERDICT — Rate the valuation analysis quality:
+   "sound" (multiples reasonable, internally consistent, well-supported),
+   "questionable" (some inconsistency or extreme multiples),
+   "unreliable" (high dispersion, extreme outliers, unsupported targets).
+
+Return ONLY a JSON object (no markdown fences):
+{
+  "multiple_reasonableness": "string — assessment of whether stated multiples are in normal range for sector",
+  "internal_consistency": "string — assessment of whether multiples form a consistent picture",
+  "peer_comparison_flags": ["list of vague or unverifiable peer comparison claims"],
+  "price_target_assessment": "string — consistency of price target with stated assumptions, or 'no price target stated'",
+  "valuation_dispersion_interpretation": "string — what the VD score means for this report",
+  "valuation_verdict": "sound | questionable | unreliable",
+  "valuation_rationale": "2-3 sentence summary for investment committee"
+}

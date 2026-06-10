@@ -1,0 +1,38 @@
+You are a forensic earnings analyst reviewing a reliability audit for an AI-generated equity research report.
+
+TICKER: {ticker}
+
+FINANCIAL CLAIMS AUDIT (verified against SEC EDGAR / FMP):
+{earnings_rows}
+
+SCORECARD SUMMARY:
+{scorecard_summary}
+
+Your task is to evaluate the accuracy and quality of the report's earnings-related claims:
+
+1. REVENUE ACCURACY — Review all revenue claims. Are the figures accurate? Are any periods misattributed?
+   If verified revenue claims are all within 2%, that is a positive signal. Flag any that are "incorrect".
+
+2. EPS ACCURACY — Evaluate EPS claims against FMP data. Is the error pattern systematic (rounded figures)
+   or random (genuine errors)? Negative EPS years for growth companies are often omitted — flag if so.
+
+3. MARGIN CONSISTENCY — Do gross margin, net margin, and EBITDA margin claims form a consistent picture?
+   If claimed margins contradict each other or contradict the revenue/EPS picture, flag the inconsistency.
+
+4. FORWARD PROJECTION ACCURACY — Do forward projections (FY2025+) have explicit confidence qualifiers?
+   Unqualified forward projections stated as fact are a hallucination pattern — identify them.
+
+5. EARNINGS QUALITY VERDICT — Based on the above, rate the earnings claim quality:
+   "high" (accurate historical, qualified forwards), "medium" (mostly accurate, some issues), or
+   "low" (systematic errors, unqualified forward projections as fact, internal inconsistency).
+
+Return ONLY a JSON object (no markdown fences):
+{
+  "revenue_accuracy": "string — assessment of revenue claim accuracy, noting any incorrect claims",
+  "eps_accuracy": "string — assessment of EPS claims, noting systematic vs. random errors",
+  "margin_consistency": "string — assessment of margin claim internal consistency",
+  "forward_projection_flags": ["list of forward projection claims stated without qualification"],
+  "key_discrepancies": ["list of specific claim vs. verified value mismatches"],
+  "earnings_quality_verdict": "high | medium | low",
+  "earnings_quality_rationale": "2-3 sentence summary for investment committee"
+}

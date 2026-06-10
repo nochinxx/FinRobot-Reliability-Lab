@@ -171,6 +171,47 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] Paper HTML regenerated (paper/reliability_audit_paper.html)
 - [ ] PDF regeneration blocked (pango library missing on this machine); paper exists as .html + .md
 
+### G1 — 100-Stock Expansion (IN PROGRESS — Jun 10 2026)
+
+**Goal:** Validate the verification layer at scale. Current benchmark = 10 stocks. Target = 100.
+
+**FMP free tier constraint:** 250 calls/day. Each ticker = ~6 FMP calls + 1 SEC call. Max 40 new tickers/day.
+**Report generation:** Gemma4 via Ollama (running locally, `gemma4:12b-mlx`). Each report takes ~3-10 min.
+
+**Deliverables:**
+- [x] G1-1: Curate 90 new tickers → `docs/ticker_universe.md` (90 S&P 500 + mid-cap in 3 batches; sector-diverse; peer sets included)
+- [x] G1-0: `run_batch_report_generator.py` written — generates FinRobot reports via Gemma4/Ollama; dry-run verified; `--batch A/B/C` flags
+- [ ] G1-0-run: Actually generate 90 reports — run `python run_batch_report_generator.py --batch A` overnight (30 tickers × ~5min = ~2.5h)
+- [ ] G1-2: Warm FMP/SEC cache for all 90 new tickers in 3 daily batches (cache_manager.py warm)
+- [ ] G1-3: Run batch audit: `run_batch_audit.py` on all 100 tickers (no API after cache warm)
+- [ ] G1-4: Rebuild master fact table: `run_master_fact_table.py` — expect 5,000-8,000 rows
+- [ ] G1-5: Re-run historical backtest on full 100-ticker universe (3 cutoff dates = 300 observations)
+- [ ] G1-6: Update paper Section 4 (experiment design) and Section 5 (results) with expanded benchmark
+- [ ] G1-7: Statistical significance — with 300 obs, Mann-Whitney and bootstrap CI on BUY vs HOLD spread will be meaningful
+
+### G2 — Multi-Agent Verification Layer (Jun 10 2026)
+
+**Goal:** Port the PRs-on-edge specialist-agent pattern to FinRobot. Each agent examines the audit data from a distinct domain angle, feeding a synthesis node. Pitch artifact for BlackRock/quant roles.
+
+**Architecture (inspired by PRs-on-edge view-mode agents):**
+- `reliability_lab/critics/earnings_analyst.py` — checks EPS/revenue/margin consistency vs. verified fact table; flags ICR inflation in financials
+- `reliability_lab/critics/valuation_agent.py` — checks P/E, EV/EBITDA, price targets for internal consistency and sector reasonableness
+- `reliability_lab/critics/catalyst_evaluator.py` — assesses whether stated catalysts are specific, timely, and supported
+- `reliability_lab/critics/coherence_agent.py` — checks if thesis + recommendation + data are internally consistent (BUY with high ICR = red flag)
+- `reliability_lab/critics/multi_agent_synthesizer.py` — aggregates all 5+ agent outputs into a structured `multi_agent_review.json`
+- `run_reliability_audit.py --agents` flag wires the new pipeline
+- Schemas: `schemas/multi_agent_review.schema.json`
+
+**Deliverables:**
+- [x] G2-1: `reliability_lab/critics/earnings_analyst.py` + prompt + 7 tests
+- [x] G2-2: `reliability_lab/critics/valuation_agent.py` + prompt + 4 tests
+- [x] G2-4: `reliability_lab/critics/coherence_agent.py` + prompt + 3 tests
+- [x] G2-5: `reliability_lab/critics/multi_agent_synthesizer.py` — aggregates 3 agents; panel verdict: CONCERN/REVIEW/ACCEPTABLE
+- [x] G2-6: `--agents` flag wired in `run_reliability_audit.py` as Phase 8
+- [ ] G2-3: `reliability_lab/critics/catalyst_evaluator.py` + schema + tests (next session)
+- [ ] G2-7: Paper Section 5 update: multi-agent panel results on 10-ticker benchmark
+- [ ] G2-8: Verify test_multi_agent_critics.py passes (20 tests written, pending sandbox verification)
+
 ### P1–P5 Final Sprint Plan (Jun 9 2026 — near-final stage)
 
 #### P1 — Paper Accuracy (critical fixes) — COMPLETE

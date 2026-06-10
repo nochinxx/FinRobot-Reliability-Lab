@@ -28,6 +28,7 @@ from reliability_lab.critic_agents import run_critic_review
 from reliability_lab.recommendation_extractor import extract_recommendation
 from reliability_lab.scoring.gates import evaluate_gate, save_gate_decision
 from reliability_lab.backtesting.experiment_manifest import build_manifest, save_manifest
+from reliability_lab.critics.multi_agent_synthesizer import run_multi_agent_review
 from reliability_lab.critics.quant_risk_reviewer import run_quant_risk_review
 from reliability_lab.critics.model_risk_reviewer import run_model_risk_review
 from reliability_lab.critics.investment_committee_memo import run_investment_committee_memo
@@ -173,6 +174,8 @@ def main():
                         help="Emit experiment manifest JSON capturing run reproducibility")
     parser.add_argument("--memo", action="store_true",
                         help="Generate investment committee memo (Phase 7; requires ANTHROPIC_API_KEY)")
+    parser.add_argument("--agents", action="store_true",
+                        help="Run G2 multi-agent specialist panel: Earnings Analyst, Valuation Agent, Coherence Agent")
     parser.add_argument("--annotate", action="store_true",
                         help="Generate annotated HTML audit report (Phase 4b)")
     args = parser.parse_args()
@@ -358,6 +361,27 @@ def main():
             output_dir=output_dir,
             gate=gate_for_memo,
         )
+
+    if args.agents:
+        print(f"\n{'━'*50}")
+        print("  Phase 8: Multi-Agent Specialist Panel (G2)")
+        print(f"{'━'*50}")
+        gate_for_agents = None
+        if args.gate:
+            gate_for_agents = evaluate_gate(
+                scorecard=scorecard, ticker=ticker, fact_rows=rows,
+                scorecard_ref=str(score_path),
+            )
+        review = run_multi_agent_review(
+            ticker=ticker,
+            scorecard=scorecard,
+            fact_rows=rows,
+            output_dir=output_dir,
+            gate=gate_for_agents,
+        )
+        if review:
+            print(f"  → Panel verdict: {review.get('panel_verdict', 'N/A')}")
+            print(f"  → Agents run: {', '.join(review.get('agents_run', []))}")
 
     return 0
 
