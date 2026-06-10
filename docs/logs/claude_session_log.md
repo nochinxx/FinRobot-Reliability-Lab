@@ -283,3 +283,28 @@ conda run -n agent python -m pytest tests/ -v
 **Tests:** 225 offline (from 201), +24 from test_annotated_report.py. All pass.
 
 **PR6 complete. Next: PR7 (planned) — annotated HTML with inline claim markers on source report, or extend paper.**
+
+---
+
+## 2026-06-09 — PR7: README, Paper v0.5, Phase 1 Re-audit, Commit + Push
+
+**Commits pushed to github.com/nochinxx/FinRobot-Reliability-Lab.git:**
+
+1. `feat: FinRobot Reliability Lab — PR1 through PR6`  
+   85 files, 11,452 insertions — full lab including all modules, schemas, tests, prompts, docs
+
+2. `docs: PR7 — README, paper v0.5, Phase 1 re-audit results`  
+   README prepended with Reliability Lab section (key results, pipeline, quick start, metrics)  
+   Paper updated: abstract, Section 3 architecture rewrite, Section 5.1 v0.4 table
+
+**Phase 1 re-audit (v0.4 pipeline, all 5 tickers):**
+- NVDA: 106 claims, SCR=0.340, ICR=0.361
+- TSLA: 103 claims, SCR=0.563, ICR=0.603
+- META: 113 claims, SCR=0.381, ICR=0.581
+- MSFT: 103 claims, SCR=0.408, ICR=0.714
+- COP: 92 claims, SCR=0.163, ICR=0.800
+- Key ICR driver: revenue_growth + ebitda_margin at period=2025 (forward projections now verifiable vs 2025 actuals)
+
+**Tests: 225 offline, all passing**
+
+**Repo state:** Full audit pipeline (Phases 1–7), 10-ticker benchmark, paper v0.5, README, 9 test files, 9 schemas, 9 prompts, all committed and pushed.

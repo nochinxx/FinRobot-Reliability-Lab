@@ -147,6 +147,46 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] Paper section swap: 5.7 (Backtesting) moved before 5.8 (Adversarial Critic); sections now in correct order
 - [x] Phase 2 ticker list fix: ROKU "🔄 in progress" → "✅ report generated"
 
+### P1–P5 Final Sprint Plan (Jun 9 2026 — near-final stage)
+
+#### P1 — Paper Accuracy (critical fixes)
+- [ ] Section 1.3: fix "9-metric" claim → "5-metric implemented, 4 planned"
+- [ ] Section 1.3: fix claim type taxonomy (quantitative/qualitative/predictive/comparative → actual 8 types)
+- [ ] Section 1.3: fill in GitHub URL
+- [ ] Section 4.1: "Three-Stock Pilot" → "Five-Stock Pilot"
+- [ ] Section 6.2: "Phase 6" → "Phase 5"
+- [ ] Duplicate Section 6.4 → renumber as 6.4/6.5/6.6
+- [ ] Conclusion: ICR is ALSO genuine hallucination (not just artifact); coverage 16–56%
+- [ ] Conclusion: add PR3–PR7 additions (gate, manifest, critic panel, IC memo, table parser)
+- [ ] Draft version line: v0.5 / 2026-06-09
+
+#### P2 — Statistical Rigor
+- [ ] New: `reliability_lab/statistics/__init__.py`
+- [ ] New: `reliability_lab/statistics/backtest_stats.py`
+  - `compute_group_stats(returns)` → mean, median, std, min, max, win_rate, sharpe_6m, max_drawdown
+  - `bootstrap_ci(returns, n_boot=10000, ci=0.95)` → (lower, upper)
+  - `mann_whitney_test(group1, group2)` → U, p-value, direction
+  - `welch_t_test(group1, group2)` → t, p-value, df
+  - `cohens_d(group1, group2)` → effect size
+  - `information_ratio(alphas)` → alpha_mean / alpha_std
+  - `format_stats_table(results)` → markdown table for paper
+- [ ] Update `run_historical_backtest.py` — call stats module after computing returns, add stat table to paper_table.md
+- [ ] Update paper Section 5.7 with full statistical table (bootstrap CIs, Mann-Whitney, effect size, Sharpe, win rate)
+- [ ] Tests: `tests/test_backtest_stats.py` (20+ tests)
+
+#### P3 — Test Coverage
+- [ ] `tests/test_historical_backtest.py` — test signal computation, snapshot structure (offline)
+- [ ] `tests/test_price_verifier.py` — mock yfinance, test return/verify logic
+- [ ] `tests/test_backtest_signal.py` — test signal extraction from claims (offline)
+
+#### P4 — Package Setup
+- [ ] `pyproject.toml` (PEP 517, minimal install)
+- [ ] `requirements.txt` pinned for reproducibility
+
+#### P5 — Final Paper + Commit
+- [ ] Regenerate PDF
+- [ ] Commit + push all changes
+
 ### PR6 — COMPLETE (Jun 9 2026)
 - [x] Annotated HTML report: `reliability_lab/report/annotated_report.py` — Phase 4b (`--annotate` flag); color-coded fact table, scorecard cards, gate banner, conflict detail, XSS-safe
 - [x] Master fact table CLI: `run_master_fact_table.py` — auto-discovers tickers with fact tables, merges, prints status summary

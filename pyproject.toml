@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "finrobot-reliability-lab"
+version = "0.5.0"
+description = "Auditable trust and model-risk layer for LLM-generated equity research"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Mario Illesca", email = "mariojillesca@gmail.com"},
+]
+keywords = ["LLM", "reliability", "financial AI", "equity research", "fact verification", "model risk"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "scipy>=1.11",
+    "numpy>=1.26",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+llm = [
+    "anthropic>=0.25",
+]
+backtest = [
+    "yfinance>=0.2",
+]
+dev = [
+    "pytest>=9.0",
+    "jsonschema>=4.20",
+]
+all = [
+    "anthropic>=0.25",
+    "yfinance>=0.2",
+    "pytest>=9.0",
+    "jsonschema>=4.20",
+]
+
+[project.urls]
+Homepage = "https://github.com/nochinxx/FinRobot-Reliability-Lab"
+Repository = "https://github.com/nochinxx/FinRobot-Reliability-Lab"
+
+[project.scripts]
+finrobot-audit = "run_reliability_audit:main"
+finrobot-backtest = "run_historical_backtest:main"
+finrobot-master-table = "run_master_fact_table:main"
+
+[tool.setuptools.packages.find]
+include = ["reliability_lab*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

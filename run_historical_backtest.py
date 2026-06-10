@@ -31,6 +31,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from reliability_lab.statistics.backtest_stats import compute_all, format_stats_table
+
 try:
     import yfinance as yf
     YFINANCE = True
@@ -291,28 +293,48 @@ def save_results(results: list[dict]):
     ]
     available = [c for c in key_cols if c in df.columns]
 
+    # Load snapshots for statistical analysis
+    snapshots = []
+    for snap_path in sorted(OUTPUT_DIR.glob("*_snapshot.json")):
+        try:
+            snapshots.append(json.loads(snap_path.read_text()))
+        except Exception:
+            pass
+
     with open(OUTPUT_DIR / "paper_table.md", "w") as f:
         f.write("# Historical Backtest Results — Date-Gated Signal Quality\n\n")
         f.write(df[available].to_markdown(index=False, floatfmt=".2f"))
         f.write("\n\n*Signal generated using only FMP data available before cutoff_date.*\n")
         f.write("*Alpha = stock return minus SPY return over same period.*\n\n")
 
-        # Summary stats by signal
-        f.write("## Signal Performance Summary\n\n")
-        for sig in ["buy", "hold", "sell"]:
-            subset = df[df["signal"] == sig]
-            if subset.empty:
-                continue
-            f.write(f"### {sig.upper()} signals ({len(subset)} observations)\n")
-            for horizon in ["return_3m", "return_6m", "return_9m", "return_12m",
-                            "alpha_3m", "alpha_6m", "alpha_9m", "alpha_12m"]:
-                if horizon in df.columns:
-                    vals = subset[horizon].dropna()
-                    if not vals.empty:
-                        f.write(f"  {horizon}: mean={vals.mean():.1f}%, median={vals.median():.1f}%\n")
-            f.write("\n")
+        f.write("## Statistical Analysis\n\n")
+        for horizon in ["6m", "3m", "9m", "12m"]:
+            stats_result = compute_all(snapshots, horizon=horizon)
+            buy_g  = stats_result.get("groups", {}).get("buy", {})
+            hold_g = stats_result.get("groups", {}).get("hold", {})
+            if buy_g.get("n", 0) > 0 and hold_g.get("n", 0) > 0:
+                f.write(format_stats_table(stats_result))
+                f.write("\n\n")
 
     print(f"[hist_backtest] Paper table → {OUTPUT_DIR}/paper_table.md")
+
+    # Print statistical summary to console
+    stats_6m = compute_all(snapshots, horizon="6m")
+    buy_g  = stats_6m.get("groups", {}).get("buy",  {})
+    hold_g = stats_6m.get("groups", {}).get("hold", {})
+    bvh = stats_6m.get("buy_vs_hold", {})
+    if buy_g.get("n") and hold_g.get("n"):
+        print("\n[hist_backtest] === 6-Month Statistical Summary ===")
+        print(f"  BUY  (n={buy_g['n']}): mean={buy_g['mean']:+.1f}%  "
+              f"95%CI=[{buy_g['ci_lower']:+.1f}%, {buy_g['ci_upper']:+.1f}%]  "
+              f"Sharpe={buy_g['sharpe_6m']}")
+        print(f"  HOLD (n={hold_g['n']}): mean={hold_g['mean']:+.1f}%  "
+              f"95%CI=[{hold_g['ci_lower']:+.1f}%, {hold_g['ci_upper']:+.1f}%]  "
+              f"Sharpe={hold_g['sharpe_6m']}")
+        mw = bvh.get("mann_whitney", {})
+        cd = bvh.get("cohens_d")
+        if mw.get("p_value") is not None:
+            print(f"  Mann-Whitney p={mw['p_value']:.4f}  Cohen's d={cd:.2f}")
 
     # Print summary
     buy_sigs = df[df["signal"] == "buy"]
