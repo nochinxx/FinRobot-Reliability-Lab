@@ -33,7 +33,8 @@ _GATE_COLORS = {
 _CSS = """
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-       font-size: 13px; color: #212529; background: #f8f9fa; padding: 24px; }
+       font-size: 13px; color: #212529; background: #f8f9fa; padding: 24px;
+       color-scheme: light only; }
 h1 { font-size: 22px; margin-bottom: 4px; }
 h2 { font-size: 15px; margin: 20px 0 8px; color: #343a40; }
 .subtitle { color: #6c757d; font-size: 12px; margin-bottom: 20px; }
@@ -154,7 +155,7 @@ def _fact_table_html(fact_rows: list[dict]) -> str:
         tier_badge = f'<span style="font-size:10px;color:#6c757d">T{tier}</span>' if tier else ""
 
         rows_html.append(
-            f'<tr style="background:{bg}">'
+            f'<tr style="background:{bg};color:#212529">'
             f'<td>{_esc(r.get("metric",""))}</td>'
             f'<td>{_esc(r.get("period",""))}</td>'
             f'<td>{_esc(r.get("claimed_value",""))}</td>'
@@ -267,6 +268,7 @@ def generate_annotated_report(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <title>FinRobot Audit — {_esc(ticker)}</title>
 <style>{_CSS}</style>
 </head>

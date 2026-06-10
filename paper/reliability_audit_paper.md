@@ -248,7 +248,7 @@ Two versions of results are reported. **v0.1** used only SEC EDGAR + yfinance wi
 | NVDA | Semis | 100 | 30 | 14 | 16 | 0.300 | 0.533 | 0.467 | 0.495 |
 | TSLA | EV | 97 | 49 | 16 | 33 | 0.505 | 0.673 | 0.327 | 0.737 |
 
-*†High ICR values (0.53–0.93) reflect period attribution artifacts for revenue growth claims (see Section 5.3), not genuine data errors. Correctly-attributed revenue claims verify within 0.15% of primary sources.*
+*†High ICR values (0.53–0.93) reflect period attribution artifacts and forward projection comparisons — not pure data errors. See Section 5.9 for decomposition: 49% forward projections, 28% growth-rate methodology mismatch, 23% genuine. See Section 5.2 for revenue accuracy: GPT-4 reports mean Δ=0.12%, Gemma4 mean Δ=0.76%; all within 2%.*
 
 **Key improvement**: SCR increased from 2–4% (v0.1) to 16–51% (v0.2) — a 7–25x improvement from adding FMP percentage verifiers and fixing an API limit bug (FMP free tier caps at 5 records; the prior code requested limit=6, silently receiving 402 errors for all FMP calls).
 
@@ -536,54 +536,96 @@ The ICR quartile pattern is directionally consistent: Q1 (lowest ICR: NVDA, RIVN
 
 ### 6.1 Quantitative vs. Qualitative Reliability
 
-Historical revenue claims from FinRobot verify with remarkable accuracy (all within 0.15% of SEC EDGAR). This is consistent with FinRobot's architecture — the Expert_Investor agent sources financial data directly from the FMP and FinnHub APIs, which themselves pull from SEC filings. The accuracy isn't coincidental; it reflects the data lineage.
+Across 37 verified revenue claims in the 10-ticker benchmark, both GPT-4 and Gemma4 reports are quantitatively accurate on historical revenue: GPT-4 mean error 0.12% (all within 1%), Gemma4 mean error 0.76% (all within 2%). See Section 5.2. This is consistent with FinRobot's architecture — the Expert_Investor agent sources financial data directly from FMP and SEC EDGAR APIs. The accuracy reflects the data lineage, not model memorization.
 
-Qualitative claims ("COP demonstrates solid financial performance compared to EOG") and guidance claims ("revenue projected to reach $66.4B") are not machine-verifiable with our current free-source pipeline. This represents ~90% of extracted claims and is where human analyst judgment is most critical.
+Where the two generators diverge is not in *what* data they report but *how they represent and project it*: GPT-4 states historical figures to the cent; Gemma4 rounds to the nearest $0.1B. More significantly, forward projections (FY2025+) diverge materially from actuals for Gemma4 — EBITDA margins of 43–72% were projected for ETSY/ROKU vs. ~9% actual. GPT-4 Phase 1 reports also contain forward projection errors (49% of all incorrect claims are FY2025 projections), but with narrower magnitude.
 
-### 6.2 Failure Mode Taxonomy (v0.1, from pilot)
+Qualitative claims ("COP demonstrates solid financial performance compared to EOG") and guidance claims ("revenue projected to reach $66.4B") remain structurally unverifiable against free-tier primary sources. These represent ~65% of extracted claims in the v0.4 pipeline — the primary bottleneck to reaching the SCR ≥ 0.80 deployment threshold.
 
-Based on the five-stock pilot, we identify the following failure modes in FinRobot reports:
+### 6.2 Failure Mode Taxonomy (v0.4, 10-ticker benchmark)
 
-| Failure Mode | Observed? | Evidence |
-|-------------|-----------|----------|
-| **Period attribution error** | Yes | NVDA FY2024/$60.9B labeled as 2023; TSLA 2021/$53.8B labeled as 2023 |
-| **Missing values** | Yes | Several report fields rendered blank in HTML (P/E, EBITDA margins for some stocks) |
-| **High valuation dispersion** | Yes | All 5 reports show VD > 0.30; TSLA reaches 0.737 |
-| **Stale data** | Not yet measured | Requires comparing report date vs. data vintage |
-| **Narrative-data mismatch** | Not yet measured | Requires LLM-based qualitative analysis |
-| **Compounding DCF errors** | Not yet measured | Requires FMP API for valuation assumptions |
+The following failure modes have been observed and quantified across the 10-ticker, 723-claim benchmark. Status reflects the v0.4 pipeline (`--mode regex`, HTML table parser active):
 
-**Most critical unmeasured risk**: narrative-data mismatch. A report can state "exceptional growth trajectory" while showing decelerating revenue. The adversarial critique agent (Phase 5) is designed to surface these cases.
+| Failure Mode | Status | Quantification |
+|-------------|--------|----------------|
+| **Period attribution (text)** | ✅ Fixed (PR2) | `_nearest_year()` now splits on " to "/" from " boundaries; revenue-level attribution errors eliminated |
+| **Table linearization** | ✅ Fixed (PR3/PR6) | HTML table parser preserves column–row structure; Phase 2 MV coverage 2→6–17 claims/ticker |
+| **Forward projection inflation** | ✅ Measured | 49% of all incorrect claims; Gemma4 EBITDA 43–72% claimed vs 9% actual (ETSY/ROKU) |
+| **Growth-rate methodology mismatch** | ✅ Measured | 28% of incorrect claims; `verify_revenue_growth()` YoY diverges from report's base-year choice |
+| **High valuation dispersion** | ✅ Measured | All 5 Phase 1 reports VD > 0.30; TSLA 0.737; Phase 2 reports too short to extract multiples reliably |
+| **Narrative-data mismatch** | ✅ Detected (Phase 5) | Adversarial critic identifies in all 3 Phase 1 tested reports; NVDA $85B revenue overstatement found |
+| **Genuine hallucination (historical)** | ✅ Measured | 23% of incorrect claims = genuine errors on verifiable historical figures; adjusted ICR 0.08–0.53 |
+| **Missing structured values** | Partial | FMP free tier lacks income-statement endpoint; revenue verification requires SEC EDGAR; EPS/P/E/EV/EBITDA covered via ratios endpoint |
+| **Stale data** | Not measured | Report generation date vs. FMP data vintage not yet compared; FMP ratios typically lag 90–180 days |
+| **Generator-dependent precision** | ✅ Measured | GPT-4: revenue mean Δ=0.12%; Gemma4: mean Δ=0.76% (rounding); both within tolerance |
+| **Loss-making company signal** | ✅ Observed | RIVN, RBLX, LCID: negative P/E → insufficient history → HOLD default; 3 of 3 correctly withheld from BUY signal |
 
-### 6.3 The Case for Less-Analyzed Stocks
+**Key shift from v0.1**: The failure mode previously labeled "period attribution error" has been decomposed into two independent causes with different fixes — text-based misattribution (resolved by `_nearest_year()` fix) and table-linearization (resolved by the HTML table parser). These were conflated in v0.1.
 
-The pilot covered five high-profile large-caps. Extending to less-analyzed stocks is methodologically sound: for NVDA, TSLA, MSFT, and META, the LLM training corpus is saturated with analyst reports, earnings call summaries, and news. The LLM effectively "knows" these figures from pre-training.
+The remaining high-leverage open problem is **Tier 2 source integration**. Company IR filings (earnings transcripts, press releases) would likely cover 60–70% of the currently-unverifiable guidance claims, moving aggregate SCR from 13.6% toward the 80% deployment threshold. This requires structured parsing of earnings call transcripts, which are freely available via SEC EDGAR Form 8-K.
 
-For mid-cap and small-cap companies with fewer analyst reports in training data, the LLM must rely more on the FMP/SEC data fetched at inference time — or hallucinate. This creates a natural experiment for testing whether FinRobot's reliability degrades for less-covered stocks.
+### 6.3 Generator Dependence and the Coverage Asymmetry
 
-**Phase 2 expansion stocks** (less analyzed, FMP free tier confirmed):
-- Etsy (ETSY) — niche e-commerce marketplace, mid-cap ✅ report generated
-- Roku (ROKU) — pure-play streaming platform, mid-cap ✅ report generated
-- Rivian (RIVN) — EV startup, volatile, loss-making
-- Roblox (RBLX) — gaming/metaverse, younger audience
-- Lucid Motors (LCID) — EV competitor, ultra-volatile
+The comparison between Phase 1 (GPT-4) and Phase 2 (Gemma4 12B) reveals a coverage asymmetry driven by output verbosity:
 
-Note: Originally planned stocks (DOCN, ZI, PTON, VFC, ALRM) are not available on FMP free tier (402 Payment Required) and were replaced with the above.
+- GPT-4 reports: ~2,000-character narrative sections with year-anchored sentences → regex extractor captures 30–58 MV claims/report
+- Gemma4 reports: ~300-character narratives with most numeric data in HTML tables → regex alone captures 1–2 MV claims; table parser raises this to 6–17
 
-### 6.4 Implications for FinRobot Deployment
+This asymmetry has a direct implication: the audit pipeline's sensitivity scales with the LLM's verbosity. A more compact generator (e.g., a fine-tuned 7B model) would produce fewer narrative claims, reducing regex coverage. The HTML table parser partially compensates, but the ideal extractor combines structural parsing (for tables) with sentence-level understanding (for narrative).
 
-The audit layer enables a deployment gating pattern: only publish reports that meet minimum reliability thresholds (SCR ≥ 0.80, ICR ≤ 0.05). With the v0.4 FMP-integrated + table-parser pipeline, SCR reaches 16–56% across Phase 1 stocks. The remaining gap to 80% is primarily forward guidance claims (35% of all claims by volume) that are structurally unverifiable against historical actuals. LLM-based extraction is expected to reduce misclassified guidance claims and push SCR closer to 60–70%.
+The Gemma4 12B results also confirm that the underlying financial data is model-independent: where Gemma4 does state historical revenue figures, they verify within 2% of SEC EDGAR — the same accuracy as GPT-4. The failure is in the forward projections, not the historical facts.
 
-**Implemented gating policy** (live in `reliability_lab/scoring/gates.py`):
-- FAIL: ICR > 0.15 OR SCR < 0.10 OR SOURCE_CONFLICT ratio > 20%
-- HUMAN_REVIEW: any threshold fails or any SOURCE_CONFLICT present
-- PASS: all 5 metric targets met
+### 6.4 Deployment Roadmap
 
-None of the 10 benchmark tickers currently PASS the gate — the pipeline correctly withholds endorsement until verification coverage improves.
+The audit layer implements a gating pattern: reports that fail minimum reliability thresholds are blocked from downstream use. The current pipeline produces FAIL or HUMAN_REVIEW for all 10 benchmark tickers — correct behavior, since no ticker meets the SCR ≥ 0.80 target. The following table maps each gap to its closure path:
+
+| Gap | Current State | Closure Path | Estimated SCR Impact |
+|-----|--------------|-------------|---------------------|
+| Forward guidance (35% of claims) | Structurally unverifiable | LLM extraction distinguishing historical from forward; accept NMV | +0pp (correctly NMV) |
+| Revenue growth rates (10% of claims) | YoY methodology mismatch | Standardize base-year convention; Tier 2 earnings transcripts | +5pp |
+| Valuation multiples (12% of claims) | FMP free tier (Tier 3) | FMP paid tier or direct exchange feeds | +3pp |
+| Peer comparisons (7% of claims) | No verifier | Peer data from SEC EDGAR cross-reference | +4pp |
+| Guidance claims (20% of claims) | Unverifiable vs. actuals | Compare at T+12m; build retrospective verifier | +8pp (deferred) |
+| Narrative quality (~10%) | Not verifiable by number-matching | LLM-based semantic consistency check | Diagnostic only |
+
+**Quantifying Tier 2 impact**: Of the 723 total claims across 10 tickers, 475 (65.7%) are currently unverifiable. Breaking down those 475 NMV claims: approximately 253 (35% of total) are forward guidance or projections; 51 (7%) are peer comparisons requiring cross-ticker data; and 171 (24%) are methodology-dependent (growth rates, narrative quality) or structurally ambiguous (rounded values, qualitative language). SEC EDGAR Form 8-K filings — which contain quarterly earnings releases and are freely available — would enable *temporal retroactive verification*: a guidance claim in a report dated T−12m can be checked against the T-period actual reported in the subsequent 8-K. This retroactive pipeline would unlock approximately **35pp** of SCR (253/723), raising aggregate SCR from 13.6% to **~49%**. Combined with standardized growth-rate methodology (+5pp) and peer-comparison cross-referencing (+4pp), an achievable medium-term SCR target is **~58%** without paid data. Reaching ≥80% requires either a paid Tier 2 data feed (Bloomberg, Refinitiv) for full guidance coverage, or an explicit policy decision to exclude forward projections from the verifiable-claim universe — which would set the practical ceiling at 65% (100% minus the structurally-forward 35%).
+
+The realistic near-term target is **SCR ≈ 40–50%** by adding earnings transcript parsing (SEC EDGAR 8-K filings) and standardizing the revenue growth base-year convention.
+
+**Implemented gating policy** (`reliability_lab/scoring/gates.py`):
+
+| Decision | Condition |
+|----------|-----------|
+| FAIL | ICR > 0.15 OR SCR < 0.10 OR SOURCE_CONFLICT ratio > 20% |
+| HUMAN_REVIEW | Any threshold fails OR any SOURCE_CONFLICT present |
+| PASS | SCR ≥ 0.80, PSCR ≥ 0.90, UCR ≤ 0.15, ICR ≤ 0.05, VD ≤ 0.10 |
+
+For a model-risk deployment, we recommend treating the HUMAN_REVIEW decision not as "reject" but as "route to analyst desk" — the report is surfaced with a structured critique (from the Phase 5 critic panel) rather than suppressed. This preserves the value of FinRobot's qualitative analysis while flagging the quantitative claims that require human verification.
+
+**Deployment readiness checklist**: The following gates must be satisfied before the pipeline is suitable for production use in a model-risk context. Current state reflects the 10-ticker benchmark (Jun 2026):
+
+| Requirement | Threshold | Current State | Status |
+|------------|-----------|---------------|--------|
+| Source Coverage Rate (SCR) | ≥ 0.80 | 0.14 average | ❌ Not ready |
+| Primary Source Coverage Rate (PSCR) | ≥ 0.90 | 0.14 (Tier 1 only) | ❌ Not ready |
+| Incorrect Claim Rate (ICR) | ≤ 0.05 | 0.08–0.53 (genuine) | ❌ Not ready |
+| Unsupported Claim Rate (UCR) | ≤ 0.15 | 0.01–0.14 | ⚠ Marginal |
+| Valuation Dispersion (VD) | ≤ 0.10 | 0.30–0.74 | ❌ Not ready |
+| Tier 2 sources integrated | SEC 8-K at minimum | Not implemented | ❌ Blocked |
+| Prospective backtest size | ≥ 100 observations | 27 historical | ⚠ Marginal |
+| ICR decomposition | All tickers, both phases | Phase 1 only | ⚠ Partial |
+
+The HUMAN_REVIEW tier is suitable for **analyst-augmented** deployment today: every report is surfaced to a human analyst alongside the structured critique. Production-autonomous deployment (no human in the loop) requires all thresholds to be met simultaneously. Based on the roadmap above, the earliest realistic date for analyst-augmented deployment of Phase 1 tickers is Q3 2026 (pending Tier 2 integration); full-automation deployment requires a larger prospective study and is not on a near-term timeline.
 
 ### 6.5 Generalizability
 
-The claim-extraction and verification architecture is model-agnostic — it can audit reports from any LLM system that produces structured financial narratives. The same pipeline could be applied to BloombergGPT outputs (given access), GPT-4 Code Interpreter analyses, or human analyst reports.
+The claim-extraction and verification architecture is model-agnostic and can audit reports from any LLM pipeline that produces structured financial narratives. Three dimensions of generalizability:
+
+**Generator agnosticism**: The pipeline has been validated on GPT-4 (via FinRobot's default agent) and Gemma4 12B (via Ollama). The HTML table parser handles both generators' output formats. Any LLM that produces HTML reports with `<table>` elements and narrative text can be audited with no changes to the pipeline.
+
+**Sector coverage**: The verifier suite covers the most common financial metrics across all equity sectors (revenue, EBITDA, EPS, P/E, EV/EBITDA, margins, FCF, total debt). Sector-specific metrics (e.g., book value for banks, same-store-sales for retail, proved reserves for energy) would require additional FMP or SEC EDGAR concept mappings in `fact_table_builder.py`.
+
+**Human analyst reports**: The same pipeline could be applied to human-authored analyst reports, functioning as a fact-checking layer rather than an LLM audit. The ICR for human reports would serve as a baseline for comparison — expected to be lower than LLM-generated reports, but not zero (analysts also make period attribution errors and forward projection errors).
 
 ### 6.6 Signal Quality and the Backtesting Hypothesis
 
@@ -645,7 +687,7 @@ We explicitly acknowledge the following limitations of this work:
 We presented the FinRobot Reliability Audit Layer, a deterministic post-generation pipeline for auditing factual claims in LLM-generated equity research reports. Applied to 10 stocks across two phases (Phase 1: large-cap GPT-4 reports; Phase 2: mid-cap Gemma4 reports), the pipeline extracts and verifies 723 financial claims against SEC EDGAR, FMP, and yfinance.
 
 Key findings:
-1. **Revenue accuracy**: All correctly period-attributed revenue claims verified within 0.15% of SEC EDGAR 10-K figures. FinRobot's underlying financial data sourcing is highly reliable when claims are correctly attributed.
+1. **Revenue accuracy**: 37 revenue claims verified across 10 tickers. GPT-4 reports: mean error 0.12% (all within 1%); Gemma4 reports: mean error 0.76% (all within 2%). FinRobot's underlying financial data sourcing is reliable across both generators — differences in precision are representational, not accuracy failures.
 
 2. **Coverage trajectory**: Source coverage increased from 2–4% (SEC-only) to 16–56% (FMP-integrated + HTML table parser) — a 7–28× improvement. 13.6% of all 723 claims verified against primary sources (60 LOCKED Tier 1, 38 PROVISIONAL Tier 3). The remaining 65.7% are forward guidance or structurally unverifiable claims.
 

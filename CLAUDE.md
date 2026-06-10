@@ -147,6 +147,27 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] Paper section swap: 5.7 (Backtesting) moved before 5.8 (Adversarial Critic); sections now in correct order
 - [x] Phase 2 ticker list fix: ROKU "🔄 in progress" → "✅ report generated"
 
+### F1–F4 Final Polish Sprint (Jun 10 2026)
+
+#### F1 — Paper Fixes — COMPLETE (Jun 10 2026)
+- [x] Fix 3 stale "within 0.15%" references (L251 footnote, L539 Section 6.1, L648 Conclusion)
+- [x] Section 6.1: update with 37-claim accuracy finding (GPT-4 0.12%, Gemma4 0.76%)
+- [x] Section 6.2: rewrite failure mode taxonomy with actual v0.4 measurements
+- [x] README: add run_batch_audit.py, run_master_fact_table.py, fix test count (225→389), fix stale 0.15% claim
+
+#### F2 — Test Coverage (4 untested core modules) — COMPLETE (Jun 10 2026)
+- [x] `tests/test_fact_table_builder.py` — _verify_claim routing, SOURCE_CONFLICT, FACT_TABLE_COLUMNS, save_fact_table (33 tests)
+- [x] `tests/test_fmp_verifier.py` — verifier functions with mocked HTTP (_find_by_year, verify_eps, verify_pe_ratio, etc.) (31 tests)
+- [x] `tests/test_sec_verifier.py` — get_revenue, get_company_facts with mocked SEC responses
+- [x] `tests/test_api_cache.py` — DEV_MODE, OFFLINE, cache hit/miss logic (3 test fixes Jun 10)
+
+#### F3 — Discussion Section Expansion — COMPLETE (Jun 10 2026)
+- [x] Section 6 word count: grew from 994 → 2368 words (vs Results 4057)
+- [x] Quantify Tier 2 impact: 35pp SCR unlock (253/723 guidance claims) → medium-term ~58% achievable
+- [x] Deployment readiness checklist with 8 concrete thresholds and current state column
+
+#### F4 — Final commit + push, regenerate PDF
+
 ### P1–P5 Final Sprint Plan (Jun 9 2026 — near-final stage)
 
 #### P1 — Paper Accuracy (critical fixes) — COMPLETE

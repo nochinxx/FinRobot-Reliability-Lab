@@ -8,17 +8,18 @@
 > Target audience: quant / financial risk / model-risk / AI research infrastructure teams.
 
 ### Key results (10-stock benchmark, Jun 2026)
-- Revenue accuracy: all correctly-attributed historical claims within **0.15%** of SEC EDGAR
-- Source coverage: **2–4%** (SEC only) → **16–51%** (FMP integrated, 7–25× improvement)  
-- Backtest (27 obs, 3 cutoff dates): BUY **+16.5%** 6m vs HOLD **−16.4%** (**+32.9pp** spread)
+- Revenue accuracy: GPT-4 reports mean Δ=**0.12%** (all within 1%), Gemma4 mean Δ=**0.76%** (all within 2%) vs. SEC EDGAR
+- Source coverage: **2–4%** (SEC only) → **16–56%** (FMP integrated + HTML table parser, 7–28× improvement)
+- Backtest (27 obs, 3 cutoff dates): BUY **+16.5%** 6m vs HOLD **−16.4%** (**+32.9pp** spread, p=0.0035)
 - 723 claims across 10 tickers — **13.6% verified** (60 LOCKED Tier 1 + 38 PROVISIONAL Tier 3)
 
 ### Quick start
 ```bash
 conda run -n agent python run_reliability_audit.py --ticker NVDA --mode regex
 conda run -n agent python run_reliability_audit.py --ticker NVDA --mode auto --critic --gate --annotate
+conda run -n agent python run_batch_audit.py         # audit all 10 tickers
 conda run -n agent python run_master_fact_table.py   # merge all ticker fact tables
-conda run -n agent python -m pytest tests/           # 225 offline tests
+conda run -n agent python -m pytest tests/           # 389 offline tests
 ```
 
 ### Pipeline
