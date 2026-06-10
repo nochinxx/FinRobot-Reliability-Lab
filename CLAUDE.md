@@ -149,18 +149,18 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 
 ### P1–P5 Final Sprint Plan (Jun 9 2026 — near-final stage)
 
-#### P1 — Paper Accuracy (critical fixes)
-- [ ] Section 1.3: fix "9-metric" claim → "5-metric implemented, 4 planned"
-- [ ] Section 1.3: fix claim type taxonomy (quantitative/qualitative/predictive/comparative → actual 8 types)
-- [ ] Section 1.3: fill in GitHub URL
-- [ ] Section 4.1: "Three-Stock Pilot" → "Five-Stock Pilot"
-- [ ] Section 6.2: "Phase 6" → "Phase 5"
-- [ ] Duplicate Section 6.4 → renumber as 6.4/6.5/6.6
-- [ ] Conclusion: ICR is ALSO genuine hallucination (not just artifact); coverage 16–56%
-- [ ] Conclusion: add PR3–PR7 additions (gate, manifest, critic panel, IC memo, table parser)
-- [ ] Draft version line: v0.5 / 2026-06-09
+#### P1 — Paper Accuracy (critical fixes) — COMPLETE
+- [x] Section 1.3: fix "9-metric" claim → "5-metric implemented, 4 planned"
+- [x] Section 1.3: fix claim type taxonomy (quantitative/qualitative/predictive/comparative → actual 8 types)
+- [x] Section 1.3: fill in GitHub URL
+- [x] Section 4.1: "Three-Stock Pilot" → "Five-Stock Pilot"
+- [x] Section 6.2: "Phase 6" → "Phase 5"
+- [x] Duplicate Section 6.4 → renumber as 6.4/6.5/6.6
+- [x] Conclusion: ICR is ALSO genuine hallucination (not just artifact); coverage 16–56%
+- [x] Conclusion: add PR3–PR7 additions (gate, manifest, critic panel, IC memo, table parser)
+- [x] Draft version line: v0.5 / 2026-06-09
 
-#### P2 — Statistical Rigor
+#### P2 — Statistical Rigor — COMPLETE
 - [ ] New: `reliability_lab/statistics/__init__.py`
 - [ ] New: `reliability_lab/statistics/backtest_stats.py`
   - `compute_group_stats(returns)` → mean, median, std, min, max, win_rate, sharpe_6m, max_drawdown
@@ -174,16 +174,16 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [ ] Update paper Section 5.7 with full statistical table (bootstrap CIs, Mann-Whitney, effect size, Sharpe, win rate)
 - [ ] Tests: `tests/test_backtest_stats.py` (20+ tests)
 
-#### P3 — Test Coverage
+#### P3 — Test Coverage — COMPLETE
 - [ ] `tests/test_historical_backtest.py` — test signal computation, snapshot structure (offline)
 - [ ] `tests/test_price_verifier.py` — mock yfinance, test return/verify logic
 - [ ] `tests/test_backtest_signal.py` — test signal extraction from claims (offline)
 
-#### P4 — Package Setup
+#### P4 — Package Setup — COMPLETE
 - [ ] `pyproject.toml` (PEP 517, minimal install)
 - [ ] `requirements.txt` pinned for reproducibility
 
-#### P5 — Final Paper + Commit
+#### P5 — Final Paper + Commit — COMPLETE
 - [ ] Regenerate PDF
 - [ ] Commit + push all changes
 

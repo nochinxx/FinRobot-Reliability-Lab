@@ -67,7 +67,7 @@ Financial claims are structurally different from general factual claims: they ar
 
 ### 2.3 Reliability in Agentic Systems
 
-**Life-Harness** (PLACEHOLDER: citation) demonstrated that swapping the agent scaffold — with the model frozen — can improve task success rates from 61.5% to 87.2%. This validates the premise that reliability is a harness-level property, not purely a model-level property. Our work extends this insight to the financial domain: we treat reliability not as a function of which LLM is used, but as a property of the pipeline's verifiability architecture.
+Prior work on agentic scaffolding has demonstrated that pipeline architecture, independent of the underlying model, is a primary driver of task reliability. Our work applies this insight to the financial domain: we treat reliability not as a function of which LLM is used, but as a property of the pipeline's verifiability architecture.
 
 ---
 
@@ -222,7 +222,7 @@ All outputs in `output/{TICKER}/`. Aggregate: `run_master_fact_table.py` produce
 
 ## 5. Results
 
-*Note on pilot stocks: The initial five audits (COP, MSFT, META, NVDA, TSLA) were run on sample reports included in the FinRobot repository. Per Mario's direction, subsequent phases will focus on less-analyzed mid-cap stocks to test reliability where LLM training data is sparser. These five serve as methodology validation.*
+*Note on pilot stocks: The initial five audits (COP, MSFT, META, NVDA, TSLA) were run on sample reports included in the FinRobot repository. Phase 2 focuses on less-analyzed mid-cap stocks to test reliability where LLM training data is sparser. These five serve as methodology validation.*
 
 ### 5.1 Aggregate Pilot Results
 
@@ -268,9 +268,9 @@ Every revenue claim that was correctly period-attributed verified against SEC ED
 
 All 7 correctly-attributed revenue claims verified within 0.15% of SEC EDGAR 10-K figures. **FinRobot's quantitative revenue data is highly accurate.**
 
-### 5.3 Primary Reliability Issue: Period Attribution Error
+### 5.3 Period Attribution and the ICR Inflation Artifact
 
-Three claims were flagged as "incorrect" but are factually accurate with the wrong year:
+Early pipeline versions (v0.1–v0.2) showed that several "incorrect" claims were factually accurate values attributed to the wrong year. Canonical examples:
 
 | Ticker | Claimed | Reported Period | Actual Period | Issue |
 |--------|---------|-----------------|---------------|-------|
@@ -278,9 +278,11 @@ Three claims were flagged as "incorrect" but are factually accurate with the wro
 | MSFT | $245.1B revenue | 2021 | FY2024 | Multi-year sentence context |
 | TSLA | $53.8B revenue | 2023 | FY2021 | Multi-year sentence context |
 
-Root cause: regex extraction uses nearest-year in a text window, which fails for sentences of the form "Revenue grew from $X in YEAR₁ to $Y in YEAR₂" — the smaller value may be attributed to the wrong year.
+Root cause: regex extraction uses nearest-year in a ±200-character text window, which fails for sentences of the form "Revenue grew from $X in YEAR₁ to $Y in YEAR₂" — the earlier value may absorb the later year's label.
 
-**Implication**: This is a claim extractor limitation, not a FinRobot data quality problem. LLM-based extraction (see Section 3.2) would resolve this by understanding the sentence structure. This motivates the hybrid extraction approach.
+**Fix (PR2)**: `_nearest_year()` now splits compound sentences on " to " / " from " boundaries before running year search. The three examples above now extract correctly, and the ICR inflation artifact for revenue *levels* is resolved.
+
+**Residual issue (PR6 finding)**: Period attribution for `revenue_growth` and `ebitda_margin` metrics remains challenging in v0.4, because these metrics require computing YoY % from two annual records — and the report may have used a different base year or different annual data source than SEC EDGAR. This drives 28% of incorrect claims (see Section 5.9 decomposition). The revenue *level* claims are now highly accurate; the *rate* claims require additional methodology work.
 
 ### 5.4 Valuation Dispersion
 
@@ -483,6 +485,40 @@ All three reports received stability scores below 0.30, indicating that the majo
 
 **Adversarial critique acceptance rate (ACAR)**: 3/12 HIGH-severity challenges accepted by Synthesizer as thesis-changing outputs (TSLA sell downgrade counts as 1 accepted; NVDA upgrade-despite-errors counts as 0 accepted for HOLD stability). This metric will be refined in subsequent work.
 
+### 5.9 ICR Source Decomposition
+
+The high incorrect claim rates (ICR 0.36–1.00) across all 10 tickers warrant decomposition. We classify each of the 145 incorrect claims across the 10-ticker benchmark into three categories (`reliability_lab/statistics/audit_stats.py`):
+
+| Category | Count | % of Incorrect | Description |
+|----------|-------|----------------|-------------|
+| **Forward projection** | 71 | 49% | FY2025 projections now verifiable against actual 2025 data |
+| **Growth misattribution** | 40 | 28% | `revenue_growth`/`ebitda_margin` at FY2021–22; YoY methodology mismatch |
+| **Genuine error** | 34 | 23% | Incorrect claims on verifiable historical figures |
+
+**Implication**: only 23% of "incorrect" claims reflect true data quality failures in FinRobot reports. 49% are forward projections that have become verifiable with the passage of time — these are not hallucinations at the time of generation. 28% are an artifact of how the `verify_revenue_growth()` function computes YoY % from SEC annual records, which can diverge from the growth rate the report computed using FMP data.
+
+The **adjusted ICR** (genuine errors only / MV claims) across Phase 1 tickers: NVDA 0.083, TSLA 0.190, META 0.163, MSFT 0.214, COP 0.533. COP is the genuine outlier — its revenue volatility (commodity-linked) makes YoY growth claims inherently harder to verify within tolerance.
+
+This decomposition is critical for interpreting the headline ICR numbers: a report with ICR=0.70 does not mean 70% of its verifiable claims are wrong — it means 70% don't match primary sources in this pipeline, primarily because forward projections are now being tested against actuals that postdate the report.
+
+### 5.10 ICR → Alpha Hypothesis Test
+
+A natural question is whether audit quality predicts signal quality: do tickers with lower ICR (fewer incorrect claims) produce better alpha?
+
+We test this using 27 (ticker × date) observations, assigning each observation the ticker's ICR from the latest v0.4 audit run. Spearman rank correlation between ICR and 6-month alpha:
+
+| Scope | Spearman ρ | p-value | n | Interpretation |
+|-------|-----------|---------|---|----------------|
+| All observations | −0.183 | 0.361 | 27 | Near-zero, not significant |
+| Within BUY signals | +0.158 | 0.685 | 9 | Near-zero, not significant |
+| Within HOLD signals | −0.178 | 0.529 | 15 | Near-zero, not significant |
+
+The ICR–alpha correlation is not statistically significant at any scope. The primary confound is the valuation signal: tickers with high ICR (RIVN, RBLX, LCID: ICR=0.47–1.00) are all HOLD signals due to negative P/E, and the HOLD signal itself predicts poor returns. The ICR and the signal are correlated with each other, making it impossible to isolate the ICR effect without controlling for signal.
+
+The ICR quartile pattern is directionally consistent: Q1 (lowest ICR: NVDA, RIVN) mean alpha = +3.7%; Q3 (ICR 0.67–0.71: LCID, MSFT) mean alpha = −38.1%. But this is driven by the signal, not the audit quality per se.
+
+**Conclusion**: The hypothesis that *lower ICR predicts better alpha* is not confirmed at this scale. It remains plausible but would require: (1) a larger ticker universe with the same signal group (all BUY, varied ICR), (2) ICR measured at the time of signal generation (not the current audit), or (3) a two-stage analysis where ICR filters which signals to act on.
+
 ---
 
 ## 6. Discussion
@@ -510,7 +546,7 @@ Based on the five-stock pilot, we identify the following failure modes in FinRob
 
 ### 6.3 The Case for Less-Analyzed Stocks
 
-The pilot covered five high-profile large-caps. Mario's direction to focus on less-analyzed stocks is methodologically sound: for NVDA, TSLA, MSFT, and META, the training corpus for any LLM is saturated with analyst reports, earnings call summaries, and news. The LLM effectively "knows" these figures from pre-training.
+The pilot covered five high-profile large-caps. Extending to less-analyzed stocks is methodologically sound: for NVDA, TSLA, MSFT, and META, the LLM training corpus is saturated with analyst reports, earnings call summaries, and news. The LLM effectively "knows" these figures from pre-training.
 
 For mid-cap and small-cap companies with fewer analyst reports in training data, the LLM must rely more on the FMP/SEC data fetched at inference time — or hallucinate. This creates a natural experiment for testing whether FinRobot's reliability degrades for less-covered stocks.
 
@@ -568,7 +604,28 @@ The `backtest_signal.py` module automates this: it reads scorecards and claims, 
 | MSFT | 2026-03-22 | +12.6% | 0.50 | 0.52 | buy | +9.03% | -3.51% |
 | TSLA | 2026-03-21 | +38.1% | 0.50 | 0.74 | buy | +2.67% | -9.87% |
 
-Only NVDA shows positive alpha (+4.37%) in the 11-week window. Full 6-month data will be available September 2026.
+Only NVDA shows positive alpha (+4.37%) in the 11-week window. Full 6-month data will be available September 2026. The ICR-alpha hypothesis is tested more formally in Section 5.10 using the 27-observation historical backtest.
+
+---
+
+## 6.7 Limitations
+
+We explicitly acknowledge the following limitations of this work:
+
+**Statistical**:
+1. *Small sample*: 27 backtest observations (9 BUY, 15 HOLD, 3 SELL). Although the BUY vs. HOLD separation is statistically significant (p=0.0035), effect sizes from small samples tend to be inflated (Winner's Curse). Results should be treated as preliminary pending a larger replication.
+2. *Single-factor signal*: The valuation signal is P/E mean-reversion only, not a multi-factor model. It is intentionally simple to isolate signal quality from audit quality, but it may not generalize.
+3. *Confounded ICR-alpha test*: As shown in Section 5.10, the ICR-alpha correlation cannot be isolated from the valuation signal at this sample size. The hypothesis remains untested in the controlled sense.
+
+**Pipeline**:
+4. *Coverage ceiling*: At 13.6% verified claims across 10 tickers, the audit cannot confirm the majority of a report's content. 65.7% of claims are structurally unverifiable (forward guidance, peer comparisons, narrative) with the current free-tier source architecture.
+5. *FMP free tier*: 250 calls/day limits batch processing. All 10 tickers can be processed in one session, but scaling to 100+ tickers would require a paid plan.
+6. *LLM nondeterminism*: Despite temperature=0, LLM extraction may vary across model versions. All results in this paper used Ollama Gemma4 12B for report generation and Claude claude-sonnet-4-6 for extraction (when API key available) with explicit run_metadata logging for reproducibility.
+7. *Single report per ticker*: Results reflect one FinRobot report per ticker. Multiple runs per ticker would measure report variance, which is unmeasured here.
+
+**Scope**:
+8. *FinRobot-specific*: The pipeline is designed for FinRobot's HTML output format. Adapting to other LLM report generators (BloombergGPT, GPT-4 Code Interpreter) would require format-specific parsers.
+9. *US equities only*: SEC EDGAR coverage is US-only. International equities would require different Tier 1 sources (SEDAR, EDGAR International, etc.).
 
 ---
 
