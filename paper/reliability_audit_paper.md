@@ -8,7 +8,7 @@ Contact: mariojillesca@gmail.com
 
 ## Abstract
 
-Large language model (LLM) systems are increasingly used to generate institutional-quality equity research reports, yet no systematic framework exists for auditing their factual reliability. We introduce the **FinRobot Reliability Audit Layer** — a deterministic verification pipeline that evaluates LLM-generated equity reports against primary financial data sources (SEC EDGAR, yFinance, Financial Modeling Prep) and computes a structured reliability scorecard. Applied to FinRobot, an open-source multi-agent financial AI platform, we audit 723 claims across 10 stocks in two phases (Phase 1: NVDA, TSLA, META, MSFT, COP; Phase 2: ETSY, ROKU, RIVN, RBLX, LCID). With SEC EDGAR alone, source coverage rates are 2–4%. Adding Financial Modeling Prep integration and an HTML table parser increases coverage to 16–56% (7–28× improvement). All correctly-attributed historical revenue claims verify within 0.15% of primary sources. A date-gated historical backtesting module across 9 tickers × 3 cutoff dates (27 observations, Jun–Dec 2025) shows BUY signals produced +16.5% average 6-month return vs. −16.4% for HOLD signals (+32.9pp spread; +4.9% vs. −27.9% alpha). A multi-agent critic panel (Phase 5) — comprising a Skeptical Analyst, Quant Risk Reviewer, and Model Risk Reviewer — identified thesis-changing inaccuracies in all 3 tested Phase 1 reports (thesis stability 0.15–0.25; TSLA downgraded HOLD→SELL post-critique). Phase 2 analysis reveals that high ICR in Gemma4-generated reports is not solely an extraction artifact: the HTML table parser surfaces genuine hallucinations in forward projections (EBITDA margins of 43–72% claimed vs. ~9% actual for ETSY/ROKU). Across 723 total claims, 13.6% verified against primary sources (60 LOCKED Tier 1, 38 PROVISIONAL Tier 3). We propose reliability scoring as a prerequisite for deploying LLM financial agents in any context where incorrect claims carry real decision weight.
+Large language model (LLM) systems are increasingly used to generate institutional-quality equity research reports, yet no systematic framework exists for auditing their factual reliability. We introduce the **FinRobot Reliability Audit Layer** — a deterministic verification pipeline that evaluates LLM-generated equity reports against primary financial data sources (SEC EDGAR, yFinance, Financial Modeling Prep) and computes a structured reliability scorecard. Applied to FinRobot, an open-source multi-agent financial AI platform, we audit 723 claims across 10 stocks in two phases (Phase 1: NVDA, TSLA, META, MSFT, COP; Phase 2: ETSY, ROKU, RIVN, RBLX, LCID). With SEC EDGAR alone, source coverage rates are 2–4%. Adding Financial Modeling Prep integration and an HTML table parser increases coverage to 16–56% (7–28× improvement). 37 revenue claims verified: GPT-4 reports within 0.12% mean error of SEC EDGAR; Gemma4 reports within 0.76% (rounding difference, not data error). A date-gated historical backtesting module across 9 tickers × 3 cutoff dates (27 observations, Jun–Dec 2025) shows BUY signals produced +16.5% average 6-month return vs. −16.4% for HOLD signals (+32.9pp spread; +4.9% vs. −27.9% alpha). A multi-agent critic panel (Phase 5) — comprising a Skeptical Analyst, Quant Risk Reviewer, and Model Risk Reviewer — identified thesis-changing inaccuracies in all 3 tested Phase 1 reports (thesis stability 0.15–0.25; TSLA downgraded HOLD→SELL post-critique). Phase 2 analysis reveals that high ICR in Gemma4-generated reports is not solely an extraction artifact: the HTML table parser surfaces genuine hallucinations in forward projections (EBITDA margins of 43–72% claimed vs. ~9% actual for ETSY/ROKU). Across 723 total claims, 13.6% verified against primary sources (60 LOCKED Tier 1, 38 PROVISIONAL Tier 3). We propose reliability scoring as a prerequisite for deploying LLM financial agents in any context where incorrect claims carry real decision weight.
 
 **Keywords:** LLM reliability, financial AI, multi-agent systems, fact verification, equity research, FinRobot
 
@@ -254,19 +254,30 @@ Two versions of results are reported. **v0.1** used only SEC EDGAR + yfinance wi
 
 ### 5.2 Key Finding: FinRobot Revenue Claims Are Accurate
 
-Every revenue claim that was correctly period-attributed verified against SEC EDGAR:
+Revenue claims are the most reliably verifiable metric: SEC EDGAR XBRL provides exact 10-K annual figures. Across all 10 benchmark tickers (v0.4 pipeline), **37 revenue claims verified against SEC EDGAR** (1 excluded: LCID FY2021 below $1M, display precision artifact). Key examples:
 
 | Claim | Period | Reported | EDGAR | Δ% |
 |-------|--------|----------|-------|-----|
-| COP Revenue | 2022 | $78.6B | $78.49B | 0.14% ✅ |
-| COP Revenue | 2023 | $56.1B | $56.14B | 0.07% ✅ |
-| META Revenue | 2023 | $134.9B | $134.9B | 0.00% ✅ |
 | NVDA Revenue | FY2023 | $27B | $26.97B | 0.11% ✅ |
 | NVDA Revenue | FY2024 | $60.9B | $60.92B | 0.03% ✅ |
-| TSLA Revenue | 2023 | $96.8B | $96.77B | 0.03% ✅ |
+| NVDA Revenue | FY2025 | $130.5B | $130.50B | 0.00% ✅ |
+| TSLA Revenue | FY2023 | $96B | $96.77B | 0.79% ✅ |
+| META Revenue | FY2023 | $134.9B | $134.90B | 0.00% ✅ |
+| META Revenue | FY2025 | $200.9B | $200.97B | 0.04% ✅ |
 | MSFT Revenue | FY2024 | $245.1B | $245.12B | 0.01% ✅ |
+| COP Revenue  | FY2022 | $78.6B | $78.49B | 0.14% ✅ |
+| ROKU Revenue | FY2024 | $4.1B | $4.11B | 0.24% ✅ |
+| RBLX Revenue | FY2024 | $3.6B | $3.60B | 0.00% ✅ |
 
-All 7 correctly-attributed revenue claims verified within 0.15% of SEC EDGAR 10-K figures. **FinRobot's quantitative revenue data is highly accurate.**
+**Revenue accuracy by generator:**
+
+| Generator | Claims | Mean Δ% | Max Δ% | Within 0.15% | Within 1% |
+|-----------|--------|---------|--------|-------------|-----------|
+| GPT-4 (Phase 1) | 21 | 0.118% | 0.796% | 17/21 (81%) | 21/21 (100%) |
+| Gemma4 12B (Phase 2) | 16 | 0.762% | 1.818% | 2/16 (13%) | 10/16 (63%) |
+| **Combined** | **37** | **0.396%** | **1.818%** | **19/37 (51%)** | **31/37 (84%)** |
+
+All 37 claims verify within 2% (the pipeline's financial tolerance). The precision difference between generators reflects how GPT-4 reports revenue to the cent ($26.97B) while Gemma4 rounds to the nearest tenth ($2.6B). This is a *representation* difference, not a data accuracy problem — both sources use the same underlying FMP/SEC data. **FinRobot's quantitative revenue data is highly accurate regardless of which LLM generates the report.**
 
 ### 5.3 Period Attribution and the ICR Inflation Artifact
 
