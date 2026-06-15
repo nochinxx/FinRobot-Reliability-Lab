@@ -61,8 +61,7 @@ def compute_scorecard(fact_rows: list[dict], claims: list[dict] = None) -> dict:
             vd = None
 
     # Per-metric breakdown
-    by_metric = defaultdict(lambda: {"total": 0, "verified": 0, "incorrect": 0,
-                                      "unsupported": 0, "not_machine_verifiable": 0})
+    by_metric: defaultdict = defaultdict(lambda: defaultdict(int))
     for r in fact_rows:
         metric = r.get("metric", "unknown")
         by_metric[metric]["total"] += 1

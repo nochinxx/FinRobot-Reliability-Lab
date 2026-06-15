@@ -154,15 +154,28 @@ def report_exists(ticker: str) -> bool:
     return path.exists()
 
 
-def generate_report(ticker: str, dry_run: bool = False) -> bool:
+def analysis_complete(ticker: str) -> bool:
+    """True if all expected analysis files exist for ticker."""
+    analysis_dir = _OUTPUT / ticker / "analysis"
+    required = [
+        "financial_metrics_and_forecasts.csv", "ratios_raw_data.csv",
+        "tagline.txt", "company_overview.txt", "investment_overview.txt",
+        "valuation_overview.txt", "risks.txt", "competitor_analysis.txt",
+        "major_takeaways.txt", "news_summary.txt",
+    ]
+    return all((analysis_dir / f).exists() for f in required)
+
+
+def generate_report(ticker: str, dry_run: bool = False, html_only: bool = False) -> bool:
     """
     Run the FinRobot financial analysis + report generation pipeline for one ticker.
+    --html-only: skip generate_financial_analysis.py; use pre-existing analysis files.
     Returns True on success.
     """
     company_name = COMPANY_NAMES.get(ticker, f"{ticker} Corporation")
     analysis_dir = _OUTPUT / ticker / "analysis"
 
-    # Step 1: generate financial analysis data + text sections
+    # Step 1: generate financial analysis data + text sections (skipped in html_only mode)
     analysis_cmd = [
         "conda", "run", "-n", "agent", "python",
         str(_FIN_SRC / "generate_financial_analysis.py"),
@@ -194,15 +207,18 @@ def generate_report(ticker: str, dry_run: bool = False) -> bool:
         "--major-takeaways-file", _file("major_takeaways.txt"),
         "--news-summary-file", _file("news_summary.txt"),
         "--output-dir", str(report_dir),
+        "--skip-auto-fetch",  # never consume FMP quota during HTML assembly
     ]
 
     if dry_run:
-        print(f"[DRY-RUN] {ticker}: analysis → {str(analysis_dir)}")
-        print(f"[DRY-RUN] {ticker}: report → {str(report_dir)}")
+        mode = "html-only" if html_only else "full"
+        print(f"[DRY-RUN] {ticker} ({mode}): analysis → {str(analysis_dir)}")
+        print(f"[DRY-RUN] {ticker} ({mode}): report → {str(report_dir)}")
         return True
 
     print(f"\n{'='*60}")
-    print(f"Generating report for {ticker} ({company_name})")
+    mode_label = "HTML assembly (existing analysis)" if html_only else "Full pipeline"
+    print(f"{mode_label}: {ticker} ({company_name})")
     print(f"{'='*60}")
 
     t0 = time.time()
@@ -210,21 +226,27 @@ def generate_report(ticker: str, dry_run: bool = False) -> bool:
         analysis_dir.mkdir(parents=True, exist_ok=True)
         report_dir.mkdir(parents=True, exist_ok=True)
 
-        result = subprocess.run(
-            analysis_cmd,
-            cwd=str(_FIN_SRC),
-            capture_output=False,
-            timeout=600,
-        )
-        if result.returncode != 0:
-            print(f"[ERROR] {ticker}: financial analysis failed (exit {result.returncode})")
-            return False
+        if not html_only:
+            result = subprocess.run(
+                analysis_cmd,
+                cwd=str(_FIN_SRC),
+                capture_output=False,
+                timeout=10800,  # 3h — Ollama text generation can take 90-120 min per ticker
+            )
+            if result.returncode != 0:
+                print(f"[ERROR] {ticker}: financial analysis failed (exit {result.returncode})")
+                return False
+        else:
+            if not analysis_complete(ticker):
+                print(f"[ERROR] {ticker}: --html-only requested but analysis files incomplete")
+                return False
+            print(f"[OK] {ticker}: using existing analysis files")
 
         result2 = subprocess.run(
             report_cmd,
             cwd=str(_FIN_SRC),
             capture_output=False,
-            timeout=300,
+            timeout=300,  # HTML assembly is fast
         )
         if result2.returncode != 0:
             print(f"[WARN] {ticker}: HTML report assembly returned non-zero")
@@ -246,7 +268,7 @@ def generate_report(ticker: str, dry_run: bool = False) -> bool:
             return False
 
     except subprocess.TimeoutExpired:
-        print(f"[ERROR] {ticker}: timed out after 10 minutes")
+        print(f"[ERROR] {ticker}: timed out (analysis step allows 3h)")
         return False
     except Exception as e:
         print(f"[ERROR] {ticker}: {e}")
@@ -262,6 +284,8 @@ def main():
                         help="Skip tickers that already have reports (default: on)")
     parser.add_argument("--force", action="store_true",
                         help="Regenerate even if report exists")
+    parser.add_argument("--html-only", action="store_true",
+                        help="Skip generate_financial_analysis.py; assemble HTML from pre-existing analysis files only (no FMP calls)")
     args = parser.parse_args()
 
     if not args.batch and not args.tickers:
@@ -287,7 +311,7 @@ def main():
             results["failed"].append(ticker)
             continue
 
-        ok = generate_report(ticker, dry_run=args.dry_run)
+        ok = generate_report(ticker, dry_run=args.dry_run, html_only=args.html_only)
         if ok:
             results["ok"].append(ticker)
         else:

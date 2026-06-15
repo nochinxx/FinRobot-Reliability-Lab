@@ -165,6 +165,21 @@ class TestByMetric:
         assert bm["verified"] == 2
         assert bm["incorrect"] == 1
 
+    def test_by_metric_handles_source_conflict(self):
+        rows = [
+            _row("SOURCE_CONFLICT", metric="ebitda"),
+            _row("verified", metric="ebitda"),
+        ]
+        sc = compute_scorecard(rows)
+        bm = sc["by_metric"]["ebitda"]
+        assert bm["SOURCE_CONFLICT"] == 1
+        assert bm["total"] == 2
+
+    def test_by_metric_handles_empty_status(self):
+        rows = [_row("", metric="pe_ratio")]
+        sc = compute_scorecard(rows)
+        assert sc["by_metric"]["pe_ratio"][""] == 1
+
 
 # ── Sample fixture cross-check ────────────────────────────────────────────────
 

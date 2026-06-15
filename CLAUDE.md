@@ -167,27 +167,39 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] Deployment readiness checklist with 8 concrete thresholds and current state column
 
 #### F4 — Final commit + push, regenerate PDF — COMPLETE (Jun 10 2026)
-- [x] 453 offline tests passing — committed b53ae20 and pushed
+- [x] 453 offline tests passing — committed b53ae20 and pushed (now 489 after G2 + SOURCE_CONFLICT fix)
 - [x] Paper HTML regenerated (paper/reliability_audit_paper.html)
 - [ ] PDF regeneration blocked (pango library missing on this machine); paper exists as .html + .md
 
-### G1 — 100-Stock Expansion (IN PROGRESS — Jun 10 2026)
+### G1 — 21-Ticker Expansion (IN PROGRESS — Jun 15 2026)
 
-**Goal:** Validate the verification layer at scale. Current benchmark = 10 stocks. Target = 100.
+**Goal:** Validate the verification layer at scale. Current benchmark = 21 stocks (expanded from 10).
 
-**FMP free tier constraint:** 250 calls/day. Each ticker = ~6 FMP calls + 1 SEC call. Max 40 new tickers/day.
-**Report generation:** Gemma4 via Ollama (running locally, `gemma4:12b-mlx`). Each report takes ~3-10 min.
+**BLOCKER (Jun 15 2026):** `generate_financial_analysis.py` uses FMP `/api/v3/income-statement/` (legacy endpoint, dead since Aug 2025). Cannot generate NEW FinRobot reports for the 18 remaining Batch A tickers (AVGO, ABT, AMGN, BMY, CRM, CRWD, DHR, GILD, LLY, MDT, MRK, MU, NOW, ORCL, PANW, QCOM, TMO, TXN). The reliability lab's fmp_verifier.py uses `/stable/` endpoints — those work fine.
+**Report generator fix:** Added `--html-only` flag and `--skip-auto-fetch` to `run_batch_report_generator.py`. Increased analysis step timeout to 3h.
+
+**Tickers with HTML reports (21 total):**
+- Original 10: COP, MSFT, META, NVDA, TSLA, ETSY, ROKU, RIVN, RBLX, LCID
+- AAPL: done Jun 12
+- Stalled 10 (analysis existed, HTML assembled Jun 15): AMZN, ADBE, ABBV, AMD, GOOGL, INTC, JNJ, NFLX, PFE, UNH
 
 **Deliverables:**
-- [x] G1-1: Curate 90 new tickers → `docs/ticker_universe.md` (90 S&P 500 + mid-cap in 3 batches; sector-diverse; peer sets included)
-- [x] G1-0: `run_batch_report_generator.py` written — generates FinRobot reports via Gemma4/Ollama; dry-run verified; `--batch A/B/C` flags
-- [ ] G1-0-run: Actually generate 90 reports — run `python run_batch_report_generator.py --batch A` overnight (30 tickers × ~5min = ~2.5h)
-- [ ] G1-2: Warm FMP/SEC cache for all 90 new tickers in 3 daily batches (cache_manager.py warm)
-- [ ] G1-3: Run batch audit: `run_batch_audit.py` on all 100 tickers (no API after cache warm)
-- [ ] G1-4: Rebuild master fact table: `run_master_fact_table.py` — expect 5,000-8,000 rows
-- [ ] G1-5: Re-run historical backtest on full 100-ticker universe (3 cutoff dates = 300 observations)
-- [ ] G1-6: Update paper Section 4 (experiment design) and Section 5 (results) with expanded benchmark
-- [ ] G1-7: Statistical significance — with 300 obs, Mann-Whitney and bootstrap CI on BUY vs HOLD spread will be meaningful
+- [x] G1-1: Curate 90 new tickers → `docs/ticker_universe.md`
+- [x] G1-0: `run_batch_report_generator.py` — added `--html-only`, `--skip-auto-fetch`, 3h timeout (Jun 15 2026)
+- [x] G1-0-run: 10 stalled HTML reports assembled (AMZN, ADBE, ABBV, AMD, GOOGL, INTC, JNJ, NFLX, PFE, UNH) — 2s each, no API calls (Jun 15 2026)
+- [~] G1-0-run-remaining: 18 remaining Batch A BLOCKED — FMP v3 income-statement endpoint dead
+- [x] G1-2: Warm FMP(/stable/)+SEC cache for 10 new tickers — all ok (Jun 15 2026)
+- [x] G1-3: Batch audit on all 21 tickers — regex mode, with gate; output/batch_results.md (Jun 15 2026)
+- [x] G1-4: Master fact table rebuilt — 1393 rows, 16.3% coverage, 296 incorrect (Jun 15 2026)
+- [ ] G1-5: Re-run historical backtest on 21-ticker universe (3 cutoff dates = 63 observations)
+- [ ] G1-6: Update paper Section 4 and Section 5 with 21-ticker results
+- [ ] G1-7: Statistical significance with expanded observations
+
+**21-ticker benchmark results (Jun 15 2026):**
+- Total claims: 1393 | MV: 523 | Verified: 227 | Incorrect: 296
+- Aggregate SCR: 0.375 | Aggregate ICR: 0.566
+- All 21 tickers: FAIL gate (ICR consistently >0.25 threshold)
+- Master fact table: 1393 rows — LOCKED 139 (10.0%), PROVISIONAL 88, CONFLICT 28, INCORRECT 296, UNVERIFIED 842
 
 ### G2 — Multi-Agent Verification Layer (Jun 10 2026)
 
@@ -206,11 +218,12 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] G2-1: `reliability_lab/critics/earnings_analyst.py` + prompt + 7 tests
 - [x] G2-2: `reliability_lab/critics/valuation_agent.py` + prompt + 4 tests
 - [x] G2-4: `reliability_lab/critics/coherence_agent.py` + prompt + 3 tests
-- [x] G2-5: `reliability_lab/critics/multi_agent_synthesizer.py` — aggregates 3 agents; panel verdict: CONCERN/REVIEW/ACCEPTABLE
+- [x] G2-5: `reliability_lab/critics/multi_agent_synthesizer.py` — aggregates 4 agents; panel verdict: CONCERN/REVIEW/ACCEPTABLE
 - [x] G2-6: `--agents` flag wired in `run_reliability_audit.py` as Phase 8
-- [ ] G2-3: `reliability_lab/critics/catalyst_evaluator.py` + schema + tests (next session)
-- [ ] G2-7: Paper Section 5 update: multi-agent panel results on 10-ticker benchmark
-- [ ] G2-8: Verify test_multi_agent_critics.py passes (20 tests written, pending sandbox verification)
+- [x] G2-3: `reliability_lab/critics/catalyst_evaluator.py` + 9 tests; wired into synthesizer as 4th agent (Jun 12 2026; committed Jun 15 2026)
+- [x] G2-8: test_multi_agent_critics.py — 34 tests passing (Jun 12 2026); expanded to 36 tests (Jun 15)
+- [x] G2-7: Paper Section 5.11 added — G2 multi-agent specialist panel architecture + design implications + pending results table (Jun 12 2026)
+- [x] Bugfix: `reliability_metrics.py` `by_metric` dict now uses `defaultdict(int)` inner — handles SOURCE_CONFLICT and unknown statuses without KeyError; +2 regression tests (Jun 12 2026)
 
 ### P1–P5 Final Sprint Plan (Jun 9 2026 — near-final stage)
 
@@ -226,8 +239,8 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
 - [x] Draft version line: v0.5 / 2026-06-09
 
 #### P2 — Statistical Rigor — COMPLETE
-- [ ] New: `reliability_lab/statistics/__init__.py`
-- [ ] New: `reliability_lab/statistics/backtest_stats.py`
+- [x] New: `reliability_lab/statistics/__init__.py`
+- [x] New: `reliability_lab/statistics/backtest_stats.py`
   - `compute_group_stats(returns)` → mean, median, std, min, max, win_rate, sharpe_6m, max_drawdown
   - `bootstrap_ci(returns, n_boot=10000, ci=0.95)` → (lower, upper)
   - `mann_whitney_test(group1, group2)` → U, p-value, direction
@@ -235,22 +248,22 @@ After completing each task: (a) mark it done in the Sprint Tracker below, (b) ap
   - `cohens_d(group1, group2)` → effect size
   - `information_ratio(alphas)` → alpha_mean / alpha_std
   - `format_stats_table(results)` → markdown table for paper
-- [ ] Update `run_historical_backtest.py` — call stats module after computing returns, add stat table to paper_table.md
-- [ ] Update paper Section 5.7 with full statistical table (bootstrap CIs, Mann-Whitney, effect size, Sharpe, win rate)
-- [ ] Tests: `tests/test_backtest_stats.py` (20+ tests)
+- [x] Update `run_historical_backtest.py` — call stats module after computing returns, add stat table to paper_table.md
+- [x] Update paper Section 5.7 with full statistical table (bootstrap CIs, Mann-Whitney, effect size, Sharpe, win rate)
+- [x] Tests: `tests/test_backtest_stats.py` (20+ tests)
 
 #### P3 — Test Coverage — COMPLETE
-- [ ] `tests/test_historical_backtest.py` — test signal computation, snapshot structure (offline)
-- [ ] `tests/test_price_verifier.py` — mock yfinance, test return/verify logic
-- [ ] `tests/test_backtest_signal.py` — test signal extraction from claims (offline)
+- [x] `tests/test_historical_backtest.py` — test signal computation, snapshot structure (offline)
+- [x] `tests/test_price_verifier.py` — mock yfinance, test return/verify logic
+- [x] `tests/test_backtest_signal.py` — test signal extraction from claims (offline)
 
 #### P4 — Package Setup — COMPLETE
-- [ ] `pyproject.toml` (PEP 517, minimal install)
-- [ ] `requirements.txt` pinned for reproducibility
+- [x] `pyproject.toml` (PEP 517, minimal install)
+- [x] `requirements.txt` pinned for reproducibility
 
 #### P5 — Final Paper + Commit — COMPLETE
-- [ ] Regenerate PDF
-- [ ] Commit + push all changes
+- [ ] Regenerate HTML/PDF (paper exists as .html + .md; PDF blocked by pango library)
+- [x] Commit + push all changes (b53ae20)
 
 ### PR6 — COMPLETE (Jun 9 2026)
 - [x] Annotated HTML report: `reliability_lab/report/annotated_report.py` — Phase 4b (`--annotate` flag); color-coded fact table, scorecard cards, gate banner, conflict detail, XSS-safe

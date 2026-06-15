@@ -15,11 +15,13 @@ from typing import Optional
 from reliability_lab.critics.earnings_analyst import run_earnings_analysis
 from reliability_lab.critics.valuation_agent import run_valuation_analysis
 from reliability_lab.critics.coherence_agent import run_coherence_analysis
+from reliability_lab.critics.catalyst_evaluator import run_catalyst_evaluation
 
 _VERDICT_ORDER = {
     "high": 3, "medium": 2, "low": 1,        # quant/earnings verdicts (high = bad)
     "unreliable": 3, "questionable": 2, "sound": 1,  # valuation
     "unreliable_r": 3, "conditional": 2, "reliable": 1,  # coherence (signal reliability)
+    "WEAK": 3, "ADEQUATE": 2, "STRONG": 1,   # catalyst (WEAK = bad)
     "unknown": 0,
 }
 
@@ -28,6 +30,7 @@ def _aggregate_verdicts(
     earnings: Optional[dict],
     valuation: Optional[dict],
     coherence: Optional[dict],
+    catalyst: Optional[dict] = None,
 ) -> dict:
     """Compute an overall panel verdict from specialist results."""
     verdicts = {}
@@ -37,6 +40,8 @@ def _aggregate_verdicts(
         verdicts["valuation"] = valuation.get("valuation_verdict", "unknown")
     if coherence:
         verdicts["coherence"] = coherence.get("signal_reliability", "unknown")
+    if catalyst:
+        verdicts["catalyst"] = catalyst.get("catalyst_verdict", "unknown")
 
     scores = [_VERDICT_ORDER.get(v, 0) for v in verdicts.values()]
     max_score = max(scores, default=0)
@@ -80,32 +85,29 @@ def run_multi_agent_review(
 
     earnings = run_earnings_analysis(ticker, scorecard, fact_rows, output_dir)
     valuation = run_valuation_analysis(ticker, scorecard, fact_rows, output_dir)
+    catalyst = run_catalyst_evaluation(ticker, scorecard, fact_rows, output_dir)
     coherence = run_coherence_analysis(ticker, scorecard, fact_rows, output_dir, gate)
 
-    aggregated = _aggregate_verdicts(earnings, valuation, coherence)
+    aggregated = _aggregate_verdicts(earnings, valuation, coherence, catalyst)
+
+    _agent_pairs = [
+        ("earnings_analyst", earnings),
+        ("valuation_agent", valuation),
+        ("catalyst_evaluator", catalyst),
+        ("coherence_agent", coherence),
+    ]
 
     review = {
         "ticker": ticker,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "agents_run": [
-            k for k, v in [
-                ("earnings_analyst", earnings),
-                ("valuation_agent", valuation),
-                ("coherence_agent", coherence),
-            ] if v is not None
-        ],
-        "agents_skipped": [
-            k for k, v in [
-                ("earnings_analyst", earnings),
-                ("valuation_agent", valuation),
-                ("coherence_agent", coherence),
-            ] if v is None
-        ],
+        "agents_run": [k for k, v in _agent_pairs if v is not None],
+        "agents_skipped": [k for k, v in _agent_pairs if v is None],
         "specialist_verdicts": aggregated["specialist_verdicts"],
         "panel_verdict": aggregated["panel_verdict"],
         "panel_verdict_explanation": aggregated["panel_verdict_explanation"],
         "earnings_summary": earnings.get("earnings_quality_rationale", "N/A") if earnings else "N/A",
         "valuation_summary": valuation.get("valuation_rationale", "N/A") if valuation else "N/A",
+        "catalyst_summary": catalyst.get("summary", "N/A") if catalyst else "N/A",
         "coherence_summary": coherence.get("coherence_rationale", "N/A") if coherence else "N/A",
         "final_disposition": coherence.get("final_disposition", "N/A") if coherence else "N/A",
     }
